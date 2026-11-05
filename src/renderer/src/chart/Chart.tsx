@@ -28,13 +28,30 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart({ type, spec,
 
   const option = useMemo(() => buildOption({ type, spec, result, theme, selectedKey, compact }), [type, spec, result, theme, selectedKey, compact]);
 
+  // SVG keeps marks crisp and individually addressable; very large results use the faster canvas.
+  const renderer: 'svg' | 'canvas' = result.rows.length <= 3000 ? 'svg' : 'canvas';
+
   useImperativeHandle(ref, () => ({
-    toPng: () => inst.current?.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: theme.panel }) ?? null
+    toPng: () => {
+      if (!option || !el.current) return null;
+      // Render a canvas copy at the same size to export a PNG, whichever renderer is on screen.
+      const host = document.createElement('div');
+      host.style.cssText = `position:fixed;left:-10000px;top:0;width:${el.current.clientWidth}px;height:${el.current.clientHeight}px`;
+      document.body.appendChild(host);
+      const off = echarts.init(host, undefined, { renderer: 'canvas' });
+      try {
+        off.setOption({ ...option, animation: false });
+        return off.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: theme.panel });
+      } finally {
+        off.dispose();
+        host.remove();
+      }
+    }
   }));
 
   useEffect(() => {
     if (!option || !el.current) return;
-    const chart = echarts.init(el.current, undefined, { renderer: 'canvas' });
+    const chart = echarts.init(el.current, undefined, { renderer });
     inst.current = chart;
     chart.on('click', (p) => {
       const ri = (p.data as { ri?: number } | undefined)?.ri;
@@ -47,8 +64,8 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart({ type, spec,
       chart.dispose();
       inst.current = null;
     };
-    // Re-create only when switching between canvas and HTML charts.
-  }, [option === null]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Re-create only when switching between canvas, SVG and HTML charts.
+  }, [option === null, renderer]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (option && inst.current) inst.current.setOption(option, true);

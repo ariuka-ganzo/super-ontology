@@ -319,7 +319,7 @@ const project = {
             tile('t_top', 'worksheet', { x: 0, y: 0, w: 6, h: 8 }, { worksheetId: 'top' }),
             tile('t_value', 'worksheet', { x: 6, y: 0, w: 6, h: 4 }, { worksheetId: 'custvalue' }),
             tile('t_ratio', 'worksheet', { x: 6, y: 4, w: 6, h: 4 }, { worksheetId: 'ratio' }),
-            tile('t_heat', 'worksheet', { x: 0, y: 8, w: 12, h: 7 }, { worksheetId: 'heat' })
+            tile('t_heat', 'worksheet', { x: 0, y: 8, w: 12, h: 10 }, { worksheetId: 'heat' })
           ]
         }
       ]

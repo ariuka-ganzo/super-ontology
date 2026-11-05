@@ -261,7 +261,7 @@ export function buildOption({ type, spec, result, theme, selectedKey, compact }:
     const [lo, hi] = extent(rows.map((r) => numeric(r[m.index])));
     return {
       ...base,
-      grid: { ...base.grid, bottom: 52 },
+      grid: { ...base.grid, bottom: 64 },
       xAxis: { type: 'category', data: xs, ...axisCommon, splitArea: { show: false } },
       yAxis: { type: 'category', data: ys, ...axisCommon, splitArea: { show: false } },
       visualMap: {
@@ -279,7 +279,7 @@ export function buildOption({ type, spec, result, theme, selectedKey, compact }:
         {
           type: 'heatmap',
           label: {
-            show: !!L.label || xs.length * ys.length <= 120,
+            show: !!L.label || xs.length * ys.length <= 60,
             color: theme.text,
             formatter: (p: { data?: Datum }) => (p.data ? fmt(m, (p.data.value as Scalar[])[2]) : '')
           },
