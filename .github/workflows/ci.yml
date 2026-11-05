@@ -54,7 +54,7 @@ jobs:
           retention-days: 7
 
   package:
-    # Builds an unpacked app with electron-builder, then checks that the packaged app can load
+    # Builds the app and installer with electron-builder, then checks that the packaged app can load
     # the DuckDB native binary from outside the asar archive, and runs the end-to-end tests on it.
     name: Package and smoke test (${{ matrix.os }})
     strategy:
@@ -76,7 +76,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - run: npx electron-builder ${{ matrix.target }} --dir --publish never
+      # Builds the installer (NSIS, dmg or AppImage) as well as the unpacked app it is made from,
+      # so installer configuration is checked on every pull request, not only at release time.
+      - run: npx electron-builder ${{ matrix.target }} --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
@@ -125,4 +127,15 @@ jobs:
         with:
           name: packaged-e2e-${{ runner.os }}
           path: test-results/
+          retention-days: 7
+
+      - name: Upload unsigned installer for manual testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ runner.os }}
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
+          if-no-files-found: error
           retention-days: 7
