@@ -1,0 +1,16 @@
+node_modules/
+dist/
+out/
+release/
+coverage/
+playwright-report/
+test-results/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+*.duckdb
+*.duckdb.wal
+.claude/settings.local.json
