@@ -31,3 +31,98 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+
+  e2e:
+    name: End-to-end tests (Linux, xvfb)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: xvfb-run -a npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+
+  package:
+    # Builds an unpacked app with electron-builder, then checks that the packaged app can load
+    # the DuckDB native binary from outside the asar archive, and runs the end-to-end tests on it.
+    name: Package and smoke test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: --win
+          - os: macos-latest
+            target: --mac
+          - os: ubuntu-latest
+            target: --linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx electron-builder ${{ matrix.target }} --dir --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Smoke test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $exe = Resolve-Path "release/win-unpacked/Facet BI.exe"
+          $env:FACET_SMOKE_OUT = "$env:RUNNER_TEMP\smoke.txt"
+          $env:FACET_USER_DATA = "$env:RUNNER_TEMP\userdata"
+          $p = Start-Process -FilePath $exe -ArgumentList "--smoke-test" -Wait -PassThru
+          Get-Content $env:FACET_SMOKE_OUT
+          if ($p.ExitCode -ne 0) { throw "smoke test exited with $($p.ExitCode)" }
+          if (-not (Select-String -Path $env:FACET_SMOKE_OUT -Pattern "FACET_SMOKE_OK" -Quiet)) { throw "smoke test failed" }
+          Get-ChildItem -Recurse "release/win-unpacked/resources/app.asar.unpacked/node_modules/@duckdb" -Include *.node,*.dll | Select-Object FullName
+          echo "FACET_E2E_EXECUTABLE=$exe" >> $env:GITHUB_ENV
+
+      - name: Smoke test (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          exe="$(ls -d release/mac*/Facet\ BI.app)/Contents/MacOS/Facet BI"
+          FACET_SMOKE_OUT="$RUNNER_TEMP/smoke.txt" FACET_USER_DATA="$RUNNER_TEMP/userdata" "$exe" --smoke-test
+          cat "$RUNNER_TEMP/smoke.txt"
+          grep -q FACET_SMOKE_OK "$RUNNER_TEMP/smoke.txt"
+          find release -path "*app.asar.unpacked*" -name "*.node"
+          echo "FACET_E2E_EXECUTABLE=$exe" >> "$GITHUB_ENV"
+
+      - name: Smoke test (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          FACET_SMOKE_OUT="$RUNNER_TEMP/smoke.txt" FACET_USER_DATA="$RUNNER_TEMP/userdata" xvfb-run -a release/linux-unpacked/facet-bi --smoke-test --no-sandbox
+          cat "$RUNNER_TEMP/smoke.txt"
+          grep -q FACET_SMOKE_OK "$RUNNER_TEMP/smoke.txt"
+          echo "FACET_E2E_EXECUTABLE=$PWD/release/linux-unpacked/facet-bi" >> "$GITHUB_ENV"
+
+      - name: End-to-end tests on the packaged app (Windows, macOS)
+        if: runner.os != 'Linux'
+        run: npx playwright test
+
+      - name: End-to-end tests on the packaged app (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npx playwright test
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: packaged-e2e-${{ runner.os }}
+          path: test-results/
+          retention-days: 7

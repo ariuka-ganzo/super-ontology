@@ -1,0 +1,49 @@
+appId: org.facetbi.desktop
+productName: Facet BI
+copyright: Copyright © 2026 Facet BI contributors
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**
+  - package.json
+  - '!**/*.map'
+  # The musl build of DuckDB is for Alpine Linux; Electron itself needs glibc.
+  - '!node_modules/@duckdb/node-bindings-linux-*-musl/**'
+# DuckDB is a native addon. Native binaries cannot be loaded from inside the asar archive,
+# so the DuckDB packages are unpacked next to it (resources/app.asar.unpacked).
+asarUnpack:
+  - node_modules/@duckdb/**
+extraResources:
+  - from: samples
+    to: samples
+    filter:
+      - '*.csv'
+      - '*.facet'
+fileAssociations:
+  - ext: facet
+    name: Facet BI project
+    role: Editor
+artifactName: Facet-BI-${version}-${os}-${arch}.${ext}
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+mac:
+  target:
+    - target: dmg
+  category: public.app-category.business
+  # Unsigned in v0.1. See the README for the Gatekeeper warning.
+  identity: null
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+  category: Office
+  maintainer: Facet BI contributors
+publish: null

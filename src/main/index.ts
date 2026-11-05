@@ -1,4 +1,5 @@
 import { app, BrowserWindow, session } from 'electron';
+import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Engine } from './engine/engine';
 import { registerIpc } from './ipc';
@@ -60,6 +61,13 @@ function lockDownSession(): void {
   });
 }
 
+/** GUI apps on Windows have no console, so the smoke result can also go to a file. */
+function report(line: string): void {
+  process.stdout.write(line);
+  const out = process.env['FACET_SMOKE_OUT'];
+  if (out) writeFileSync(out, line);
+}
+
 /** `--smoke-test`: load DuckDB, import the bundled sample, run a query, print the result and exit. */
 async function smokeTest(): Promise<void> {
   try {
@@ -67,10 +75,10 @@ async function smokeTest(): Promise<void> {
     const r = await e.importTable('smoke', { path: join(samplesDir(), 'orders.csv'), format: 'csv' });
     const rows = await e.unsafeRawForTests('SELECT COUNT(*), version() FROM t_smoke');
     e.close();
-    process.stdout.write(`FACET_SMOKE_OK rows=${r.rowCount} count=${rows[0][0]} duckdb=${rows[0][1]} packaged=${app.isPackaged}\n`);
+    report(`FACET_SMOKE_OK rows=${r.rowCount} count=${rows[0][0]} duckdb=${rows[0][1]} packaged=${app.isPackaged} resources=${process.resourcesPath}\n`);
     app.exit(0);
   } catch (err) {
-    process.stderr.write(`FACET_SMOKE_FAIL ${(err as Error).stack ?? err}\n`);
+    report(`FACET_SMOKE_FAIL ${(err as Error).stack ?? err}\n`);
     app.exit(1);
   }
 }

@@ -18,9 +18,11 @@ export interface Launched {
 export async function launch(opts: { firstRun?: boolean } = {}): Promise<Launched> {
   const userData = mkdtempSync(join(tmpdir(), 'facet-e2e-'));
   if (opts.firstRun === false) writeFileSync(join(userData, 'settings.json'), JSON.stringify({ firstRunDone: true }));
-  const args = [ROOT];
+  // FACET_E2E_EXECUTABLE runs the tests against a packaged build instead of the development build.
+  const exe = process.env['FACET_E2E_EXECUTABLE'];
+  const args = exe ? [] : [ROOT];
   if (process.platform === 'linux') args.push('--no-sandbox');
-  const app = await electron.launch({ args, env: { ...process.env, FACET_USER_DATA: userData, NODE_ENV: 'production' } });
+  const app = await electron.launch({ executablePath: exe || undefined, args, env: { ...process.env, FACET_USER_DATA: userData, NODE_ENV: 'production' } });
   const page = await app.firstWindow();
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
