@@ -1,24 +1,7 @@
 import { FormulaError, type BinaryOp, type LodKind, type Node } from './ast';
 import { tokenize, type Token } from './lexer';
 
-const KEYWORDS = new Set([
-  'IF',
-  'THEN',
-  'ELSEIF',
-  'ELSE',
-  'END',
-  'CASE',
-  'WHEN',
-  'AND',
-  'OR',
-  'NOT',
-  'TRUE',
-  'FALSE',
-  'NULL',
-  'FIXED',
-  'INCLUDE',
-  'EXCLUDE'
-]);
+const KEYWORDS = new Set(['IF', 'THEN', 'ELSEIF', 'ELSE', 'END', 'CASE', 'WHEN', 'AND', 'OR', 'NOT', 'TRUE', 'FALSE', 'NULL', 'FIXED', 'INCLUDE', 'EXCLUDE']);
 
 /** Parses formula text into an AST. Throws FormulaError with a position on bad input. */
 export function parseFormula(text: string): Node {
@@ -164,8 +147,7 @@ class Parser {
       case 'date': {
         this.next();
         const m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(t.value);
-        if (!m || !validDate(+m[1], +m[2], +m[3]))
-          throw new FormulaError(`#${t.value}# is not a valid date. Write dates as #YYYY-MM-DD#`, t.start, t.end);
+        if (!m || !validDate(+m[1], +m[2], +m[3])) throw new FormulaError(`#${t.value}# is not a valid date. Write dates as #YYYY-MM-DD#`, t.start, t.end);
         return { type: 'date', value: t.value.replace(' ', 'T'), datetime: m[4] !== undefined, start: t.start, end: t.end };
       }
       case 'field': {
@@ -181,8 +163,7 @@ class Parser {
         this.next();
         const inner = this.expression();
         const close = this.peek();
-        if (close.kind !== ')')
-          throw new FormulaError(`Expected ')' to close the bracket opened at position ${t.start + 1}`, close.start, close.end);
+        if (close.kind !== ')') throw new FormulaError(`Expected ')' to close the bracket opened at position ${t.start + 1}`, close.start, close.end);
         this.next();
         return { ...inner, start: t.start, end: close.end };
       }
@@ -210,12 +191,7 @@ class Parser {
     if (upper === 'CASE') return this.caseExpr();
     if (KEYWORDS.has(upper)) throw new FormulaError(`Unexpected keyword ${upper}`, t.start, t.end);
     this.next();
-    if (this.peek().kind !== '(')
-      throw new FormulaError(
-        `Unknown name '${t.value}'. Put field names in square brackets, like [${t.value}]`,
-        t.start,
-        t.end
-      );
+    if (this.peek().kind !== '(') throw new FormulaError(`Unknown name '${t.value}'. Put field names in square brackets, like [${t.value}]`, t.start, t.end);
     this.next();
     const args: Node[] = [];
     if (this.peek().kind !== ')') {
@@ -229,8 +205,7 @@ class Parser {
       }
     }
     const close = this.peek();
-    if (close.kind !== ')')
-      throw new FormulaError(`Expected ')' to close ${upper}( started at position ${t.start + 1}`, close.start, close.end);
+    if (close.kind !== ')') throw new FormulaError(`Expected ')' to close ${upper}( started at position ${t.start + 1}`, close.start, close.end);
     this.next();
     return { type: 'call', name: upper, args, start: t.start, end: close.end };
   }
@@ -252,15 +227,13 @@ class Parser {
       }
       if (this.isKw('ELSE')) {
         this.next();
-        if (this.isKw('IF'))
-          throw new FormulaError('Write ELSEIF as one word', this.peek().start, this.peek().end);
+        if (this.isKw('IF')) throw new FormulaError('Write ELSEIF as one word', this.peek().start, this.peek().end);
         elseNode = this.expression();
       }
       break;
     }
     const end = this.peek();
-    if (!this.isKw('END'))
-      throw new FormulaError(`Missing END for the IF started at position ${start.start + 1}`, end.start, end.end);
+    if (!this.isKw('END')) throw new FormulaError(`Missing END for the IF started at position ${start.start + 1}`, end.start, end.end);
     this.next();
     return { type: 'if', branches, else: elseNode, start: start.start, end: end.end };
   }
@@ -285,8 +258,7 @@ class Parser {
       elseNode = this.expression();
     }
     const end = this.peek();
-    if (!this.isKw('END'))
-      throw new FormulaError(`Missing END for the CASE started at position ${start.start + 1}`, end.start, end.end);
+    if (!this.isKw('END')) throw new FormulaError(`Missing END for the CASE started at position ${start.start + 1}`, end.start, end.end);
     this.next();
     return { type: 'case', subject, whens, else: elseNode, start: start.start, end: end.end };
   }
@@ -314,8 +286,7 @@ class Parser {
     }
     const body = this.expression();
     const close = this.peek();
-    if (close.kind !== '}')
-      throw new FormulaError(`Expected '}' to close the expression started at position ${open.start + 1}`, close.start, close.end);
+    if (close.kind !== '}') throw new FormulaError(`Expected '}' to close the expression started at position ${open.start + 1}`, close.start, close.end);
     this.next();
     return { type: 'lod', kind, dims, body, start: open.start, end: close.end };
   }

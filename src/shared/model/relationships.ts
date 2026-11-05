@@ -51,8 +51,7 @@ export function suggestRelationships(model: Model): RelationshipSuggestion[] {
           const na = norm(ca.name);
           const nb = norm(cb.name);
           let reason = '';
-          if (na === nb && (na.endsWith('id') || na.endsWith('key') || na.endsWith('code')))
-            reason = `Both tables have ${ca.name}`;
+          if (na === nb && (na.endsWith('id') || na.endsWith('key') || na.endsWith('code'))) reason = `Both tables have ${ca.name}`;
           else if (nb === 'id' && na === singular(b.name) + 'id') reason = `${ca.name} looks like the id of ${b.name}`;
           else if (na === 'id' && nb === singular(a.name) + 'id') reason = `${cb.name} looks like the id of ${a.name}`;
           else if (na === nb && na.length > 2) reason = `Both tables have ${ca.name}`;

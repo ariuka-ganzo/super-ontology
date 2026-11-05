@@ -172,9 +172,7 @@ export class Engine {
     return this.withQuery(async (c) => {
       const src = typedSource(table, [col]);
       const x = q(col.name);
-      const stats = await c.runAndReadAll(
-        `SELECT COUNT(*), COUNT(*) - COUNT(${x}), COUNT(DISTINCT ${x}), MIN(${x}), MAX(${x}) FROM ${src}`
-      );
+      const stats = await c.runAndReadAll(`SELECT COUNT(*), COUNT(*) - COUNT(${x}), COUNT(DISTINCT ${x}), MIN(${x}), MAX(${x}) FROM ${src}`);
       const [row] = convertRows(stats.getRowsJS(), stats.columnTypes());
       const [total, nulls, distinct, min, max] = row as [number, number, number, Scalar, Scalar];
       let histogram: { label: string; count: number }[] = [];
@@ -203,9 +201,7 @@ export class Engine {
           return { label, count: counts.get(i) ?? 0 };
         });
       } else {
-        const r = await c.runAndReadAll(
-          `SELECT CAST(${x} AS VARCHAR) AS v, COUNT(*) AS n FROM ${src} GROUP BY 1 ORDER BY 2 DESC, 1 ASC NULLS LAST LIMIT 10`
-        );
+        const r = await c.runAndReadAll(`SELECT CAST(${x} AS VARCHAR) AS v, COUNT(*) AS n FROM ${src} GROUP BY 1 ORDER BY 2 DESC, 1 ASC NULLS LAST LIMIT 10`);
         histogram = convertRows(r.getRowsJS(), r.columnTypes()).map((rr) => ({ label: rr[0] === null ? 'Null' : String(rr[0]), count: Number(rr[1]) }));
       }
       return { column, total, nulls, distinct, min, max, histogram, histogramKind };

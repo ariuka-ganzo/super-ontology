@@ -10,7 +10,9 @@ function sample(dataPath: string): Project {
     formatVersion: FORMAT_VERSION,
     name: 'Test',
     model: {
-      tables: [{ id: 't1', name: 'Sales', source: { path: dataPath, format: 'csv' }, rowCount: 2, columns: [{ name: 'a', sourceType: 'BIGINT', type: 'integer' }] }],
+      tables: [
+        { id: 't1', name: 'Sales', source: { path: dataPath, format: 'csv' }, rowCount: 2, columns: [{ name: 'a', sourceType: 'BIGINT', type: 'integer' }] }
+      ],
       relationships: [],
       calcs: [{ id: 'c1', name: 'Double', formula: '[a] * 2' }]
     },
@@ -18,10 +20,22 @@ function sample(dataPath: string): Project {
       {
         id: 'w1',
         name: 'Sheet 1',
-        spec: { chartType: 'bar', columns: [], rows: [{ id: 'i1', field: { kind: 'column', table: 't1', column: 'a' }, role: 'measure', agg: 'SUM' }], tooltip: [], filters: [] }
+        spec: {
+          chartType: 'bar',
+          columns: [],
+          rows: [{ id: 'i1', field: { kind: 'column', table: 't1', column: 'a' }, role: 'measure', agg: 'SUM' }],
+          tooltip: [],
+          filters: []
+        }
       }
     ],
-    dashboards: [{ id: 'd1', name: 'Dash', pages: [{ id: 'p1', name: 'Page 1', tiles: [{ id: 'x', kind: 'worksheet', worksheetId: 'w1', layout: { x: 0, y: 0, w: 6, h: 4 } }] }] }]
+    dashboards: [
+      {
+        id: 'd1',
+        name: 'Dash',
+        pages: [{ id: 'p1', name: 'Page 1', tiles: [{ id: 'x', kind: 'worksheet', worksheetId: 'w1', layout: { x: 0, y: 0, w: 6, h: 4 } }] }]
+      }
+    ]
   };
 }
 

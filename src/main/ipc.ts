@@ -157,7 +157,11 @@ export function registerIpc(engine: Engine, getWindow: () => BrowserWindow | nul
   h('project:open', absPath.optional(), async (path) => {
     let file = path;
     if (!file) {
-      const r = await dialog.showOpenDialog(win(), { title: 'Open project', properties: ['openFile'], filters: [{ name: 'Facet BI project', extensions: ['facet'] }] });
+      const r = await dialog.showOpenDialog(win(), {
+        title: 'Open project',
+        properties: ['openFile'],
+        filters: [{ name: 'Facet BI project', extensions: ['facet'] }]
+      });
       if (r.canceled || !r.filePaths[0]) return null;
       file = r.filePaths[0];
     }
@@ -188,17 +192,32 @@ export function registerIpc(engine: Engine, getWindow: () => BrowserWindow | nul
 
   // Characters that are not allowed in file names on Windows, plus control characters.
   const safeName = (n: string): string =>
-    [...n].map((ch) => (/[\\/:*?"<>|]/.test(ch) || ch.charCodeAt(0) < 32 ? '_' : ch)).join('').slice(0, 120) || 'export';
+    [...n]
+      .map((ch) => (/[\\/:*?"<>|]/.test(ch) || ch.charCodeAt(0) < 32 ? '_' : ch))
+      .join('')
+      .slice(0, 120) || 'export';
 
-  h('export:png', z.object({ dataUrl: z.string().max(60_000_000).startsWith('data:image/png;base64,'), name: z.string().max(200) }), async ({ dataUrl, name }) => {
-    const r = await dialog.showSaveDialog(win(), { title: 'Export chart as PNG', defaultPath: `${safeName(name)}.png`, filters: [{ name: 'PNG image', extensions: ['png'] }] });
-    if (r.canceled || !r.filePath) return null;
-    await fs.writeFile(r.filePath, Buffer.from(dataUrl.slice('data:image/png;base64,'.length), 'base64'));
-    return r.filePath;
-  });
+  h(
+    'export:png',
+    z.object({ dataUrl: z.string().max(60_000_000).startsWith('data:image/png;base64,'), name: z.string().max(200) }),
+    async ({ dataUrl, name }) => {
+      const r = await dialog.showSaveDialog(win(), {
+        title: 'Export chart as PNG',
+        defaultPath: `${safeName(name)}.png`,
+        filters: [{ name: 'PNG image', extensions: ['png'] }]
+      });
+      if (r.canceled || !r.filePath) return null;
+      await fs.writeFile(r.filePath, Buffer.from(dataUrl.slice('data:image/png;base64,'.length), 'base64'));
+      return r.filePath;
+    }
+  );
 
   h('export:csv', z.object({ req: queryRequestSchema, name: z.string().max(200) }), async ({ req, name }) => {
-    const r = await dialog.showSaveDialog(win(), { title: 'Export data as CSV', defaultPath: `${safeName(name)}.csv`, filters: [{ name: 'CSV', extensions: ['csv'] }] });
+    const r = await dialog.showSaveDialog(win(), {
+      title: 'Export data as CSV',
+      defaultPath: `${safeName(name)}.csv`,
+      filters: [{ name: 'CSV', extensions: ['csv'] }]
+    });
     if (r.canceled || !r.filePath) return null;
     const out = createWriteStream(r.filePath, { encoding: 'utf8' });
     try {
@@ -211,7 +230,11 @@ export function registerIpc(engine: Engine, getWindow: () => BrowserWindow | nul
   });
 
   h('export:pdf', z.object({ name: z.string().max(200) }), async ({ name }) => {
-    const r = await dialog.showSaveDialog(win(), { title: 'Export page as PDF', defaultPath: `${safeName(name)}.pdf`, filters: [{ name: 'PDF', extensions: ['pdf'] }] });
+    const r = await dialog.showSaveDialog(win(), {
+      title: 'Export page as PDF',
+      defaultPath: `${safeName(name)}.pdf`,
+      filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    });
     if (r.canceled || !r.filePath) return null;
     const pdf = await win().webContents.printToPDF({ landscape: true, printBackground: true, pageSize: 'A4' });
     await fs.writeFile(r.filePath, pdf);

@@ -1,0 +1,783 @@
+{
+  "formatVersion": 1,
+  "name": "Sample: Harbor & Pine sales",
+  "model": {
+    "tables": [
+      {
+        "id": "orders",
+        "name": "Orders",
+        "source": {
+          "path": "orders.csv",
+          "format": "csv"
+        },
+        "rowCount": 24003,
+        "columns": [
+          {
+            "name": "order_id",
+            "sourceType": "BIGINT",
+            "type": "integer"
+          },
+          {
+            "name": "line",
+            "sourceType": "BIGINT",
+            "type": "integer"
+          },
+          {
+            "name": "order_date",
+            "sourceType": "DATE",
+            "type": "date"
+          },
+          {
+            "name": "ship_date",
+            "sourceType": "DATE",
+            "type": "date"
+          },
+          {
+            "name": "customer_id",
+            "sourceType": "VARCHAR",
+            "type": "string"
+          },
+          {
+            "name": "product_id",
+            "sourceType": "VARCHAR",
+            "type": "string"
+          },
+          {
+            "name": "channel",
+            "sourceType": "VARCHAR",
+            "type": "string"
+          },
+          {
+            "name": "quantity",
+            "sourceType": "BIGINT",
+            "type": "integer"
+          },
+          {
+            "name": "unit_price",
+            "sourceType": "DOUBLE",
+            "type": "number"
+          },
+          {
+            "name": "discount",
+            "sourceType": "DOUBLE",
+            "type": "number"
+          },
+          {
+            "name": "sales",
+            "sourceType": "DOUBLE",
+            "type": "number"
+          },
+          {
+            "name": "profit",
+            "sourceType": "DOUBLE",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "customers",
+        "name": "Customers",
+        "source": {
+          "path": "customers.csv",
+          "format": "csv"
+        },
+        "rowCount": 800,
+        "columns": [
+          {
+            "name": "customer_id",
+            "sourceType": "VARCHAR",
+            "type": "string"
+          },
+          {
+            "name": "customer_name",
+            "sourceType": "VARCHAR",
+            "type": "string"
+          },
+          {
+            "name": "segment",
+            "sourceType": "VARCHAR",
+            "type": "string"
+          },
+          {
+            "name": "city",
+            "sourceType": "VARCHAR",
+            "type": "string"
+          },
+          {
+            "name": "region",
+            "sourceType": "VARCHAR",
+            "type": "string"
+          },
+          {
+            "name": "signup_date",
+            "sourceType": "DATE",
+            "type": "date"
+          }
+        ]
+      },
+      {
+        "id": "products",
+        "name": "Products",
+        "source": {
+          "path": "products.csv",
+          "format": "csv"
+        },
+        "rowCount": 121,
+        "columns": [
+          {
+            "name": "product_id",
+            "sourceType": "VARCHAR",
+            "type": "string"
+          },
+          {
+            "name": "product_name",
+            "sourceType": "VARCHAR",
+            "type": "string"
+          },
+          {
+            "name": "category",
+            "sourceType": "VARCHAR",
+            "type": "string"
+          },
+          {
+            "name": "subcategory",
+            "sourceType": "VARCHAR",
+            "type": "string"
+          },
+          {
+            "name": "list_price",
+            "sourceType": "DOUBLE",
+            "type": "number"
+          },
+          {
+            "name": "unit_cost",
+            "sourceType": "DOUBLE",
+            "type": "number"
+          }
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "id": "r_cust",
+        "fromTable": "orders",
+        "fromColumn": "customer_id",
+        "toTable": "customers",
+        "toColumn": "customer_id",
+        "cardinality": "many-to-one"
+      },
+      {
+        "id": "r_prod",
+        "fromTable": "orders",
+        "fromColumn": "product_id",
+        "toTable": "products",
+        "toColumn": "product_id",
+        "cardinality": "many-to-one"
+      }
+    ],
+    "calcs": [
+      {
+        "id": "profit_ratio",
+        "name": "Profit Ratio",
+        "formula": "SUM([profit]) / SUM([sales])"
+      },
+      {
+        "id": "avg_customer_value",
+        "name": "Average Customer Value",
+        "formula": "// Sales per customer, then averaged for each mark\nAVG({INCLUDE [Orders].[customer_id] : SUM([sales])})"
+      },
+      {
+        "id": "customer_share",
+        "name": "Share of All Sales",
+        "formula": "SUM([sales]) / MIN({FIXED : SUM([sales])})"
+      },
+      {
+        "id": "running_sales",
+        "name": "Running Sales",
+        "formula": "RUNNING_SUM(SUM([sales]))"
+      },
+      {
+        "id": "order_size",
+        "name": "Order Size",
+        "formula": "IF [quantity] >= 10 THEN \"Bulk\" ELSEIF [quantity] >= 4 THEN \"Medium\" ELSE \"Single\" END"
+      },
+      {
+        "id": "days_to_ship",
+        "name": "Days to Ship",
+        "formula": "DATEDIFF('day', [order_date], [ship_date])"
+      }
+    ]
+  },
+  "worksheets": [
+    {
+      "id": "kpis",
+      "name": "Headline numbers",
+      "spec": {
+        "chartType": "kpi",
+        "columns": [],
+        "rows": [
+          {
+            "id": "i4",
+            "field": {
+              "kind": "column",
+              "table": "orders",
+              "column": "sales"
+            },
+            "role": "measure",
+            "agg": "SUM",
+            "format": {
+              "style": "currency",
+              "currency": "USD",
+              "decimals": 0
+            }
+          },
+          {
+            "id": "i5",
+            "field": {
+              "kind": "column",
+              "table": "orders",
+              "column": "order_id"
+            },
+            "role": "measure",
+            "agg": "COUNTD"
+          },
+          {
+            "id": "i6",
+            "field": {
+              "kind": "calc",
+              "id": "profit_ratio"
+            },
+            "role": "measure",
+            "format": {
+              "style": "percent",
+              "decimals": 1
+            }
+          }
+        ],
+        "tooltip": [],
+        "filters": []
+      }
+    },
+    {
+      "id": "trend",
+      "name": "Sales by month",
+      "spec": {
+        "chartType": "line",
+        "columns": [
+          {
+            "id": "i7",
+            "field": {
+              "kind": "column",
+              "table": "orders",
+              "column": "order_date"
+            },
+            "role": "dimension",
+            "dateLevel": "month"
+          }
+        ],
+        "rows": [
+          {
+            "id": "i1",
+            "field": {
+              "kind": "column",
+              "table": "orders",
+              "column": "sales"
+            },
+            "role": "measure",
+            "agg": "SUM",
+            "format": {
+              "style": "currency",
+              "currency": "USD",
+              "decimals": 0
+            }
+          }
+        ],
+        "tooltip": [
+          {
+            "id": "i8",
+            "field": {
+              "kind": "column",
+              "table": "orders",
+              "column": "profit"
+            },
+            "role": "measure",
+            "agg": "SUM",
+            "format": {
+              "style": "currency",
+              "currency": "USD",
+              "decimals": 0
+            }
+          }
+        ],
+        "filters": []
+      }
+    },
+    {
+      "id": "category",
+      "name": "Sales by category",
+      "spec": {
+        "chartType": "bar",
+        "columns": [
+          {
+            "id": "i9",
+            "field": {
+              "kind": "column",
+              "table": "products",
+              "column": "category"
+            },
+            "role": "dimension"
+          }
+        ],
+        "rows": [
+          {
+            "id": "i2",
+            "field": {
+              "kind": "column",
+              "table": "orders",
+              "column": "sales"
+            },
+            "role": "measure",
+            "agg": "SUM",
+            "format": {
+              "style": "currency",
+              "currency": "USD",
+              "decimals": 0
+            }
+          }
+        ],
+        "tooltip": [],
+        "filters": [],
+        "color": {
+          "id": "i10",
+          "field": {
+            "kind": "column",
+            "table": "customers",
+            "column": "segment"
+          },
+          "role": "dimension"
+        }
+      }
+    },
+    {
+      "id": "segment",
+      "name": "Sales by segment",
+      "spec": {
+        "chartType": "donut",
+        "columns": [],
+        "rows": [
+          {
+            "id": "i12",
+            "field": {
+              "kind": "column",
+              "table": "orders",
+              "column": "sales"
+            },
+            "role": "measure",
+            "agg": "SUM",
+            "format": {
+              "style": "currency",
+              "currency": "USD",
+              "decimals": 0
+            }
+          }
+        ],
+        "tooltip": [],
+        "filters": [],
+        "color": {
+          "id": "i11",
+          "field": {
+            "kind": "column",
+            "table": "customers",
+            "column": "segment"
+          },
+          "role": "dimension"
+        }
+      }
+    },
+    {
+      "id": "ratio",
+      "name": "Profit ratio by region",
+      "spec": {
+        "chartType": "bar",
+        "columns": [
+          {
+            "id": "i14",
+            "field": {
+              "kind": "column",
+              "table": "customers",
+              "column": "region"
+            },
+            "role": "dimension"
+          }
+        ],
+        "rows": [
+          {
+            "id": "i13",
+            "field": {
+              "kind": "calc",
+              "id": "profit_ratio"
+            },
+            "role": "measure",
+            "format": {
+              "style": "percent",
+              "decimals": 1
+            }
+          }
+        ],
+        "tooltip": [],
+        "filters": [],
+        "sort": {
+          "itemId": "i13",
+          "dir": "desc"
+        }
+      }
+    },
+    {
+      "id": "heat",
+      "name": "Subcategory by region",
+      "spec": {
+        "chartType": "heatmap",
+        "columns": [
+          {
+            "id": "i15",
+            "field": {
+              "kind": "column",
+              "table": "customers",
+              "column": "region"
+            },
+            "role": "dimension"
+          }
+        ],
+        "rows": [
+          {
+            "id": "i16",
+            "field": {
+              "kind": "column",
+              "table": "products",
+              "column": "subcategory"
+            },
+            "role": "dimension"
+          }
+        ],
+        "tooltip": [],
+        "filters": [],
+        "color": {
+          "id": "i17",
+          "field": {
+            "kind": "column",
+            "table": "orders",
+            "column": "profit"
+          },
+          "role": "measure",
+          "agg": "SUM",
+          "format": {
+            "style": "compact"
+          }
+        }
+      }
+    },
+    {
+      "id": "top",
+      "name": "Top 10 customers",
+      "spec": {
+        "chartType": "table",
+        "columns": [],
+        "rows": [
+          {
+            "id": "i18",
+            "field": {
+              "kind": "column",
+              "table": "customers",
+              "column": "customer_name"
+            },
+            "role": "dimension"
+          },
+          {
+            "id": "i19",
+            "field": {
+              "kind": "column",
+              "table": "customers",
+              "column": "segment"
+            },
+            "role": "dimension"
+          },
+          {
+            "id": "i3",
+            "field": {
+              "kind": "column",
+              "table": "orders",
+              "column": "sales"
+            },
+            "role": "measure",
+            "agg": "SUM",
+            "format": {
+              "style": "currency",
+              "currency": "USD",
+              "decimals": 0
+            }
+          },
+          {
+            "id": "i20",
+            "field": {
+              "kind": "calc",
+              "id": "customer_share"
+            },
+            "role": "measure",
+            "format": {
+              "style": "percent",
+              "decimals": 2
+            }
+          }
+        ],
+        "tooltip": [],
+        "filters": [
+          {
+            "id": "top10",
+            "kind": "topN",
+            "field": {
+              "kind": "column",
+              "table": "customers",
+              "column": "customer_name"
+            },
+            "n": 10,
+            "by": {
+              "field": {
+                "kind": "column",
+                "table": "orders",
+                "column": "sales"
+              },
+              "agg": "SUM"
+            },
+            "direction": "top"
+          }
+        ],
+        "sort": {
+          "itemId": "i3",
+          "dir": "desc"
+        }
+      }
+    },
+    {
+      "id": "custvalue",
+      "name": "Average customer value",
+      "spec": {
+        "chartType": "bar",
+        "columns": [
+          {
+            "id": "i22",
+            "field": {
+              "kind": "calc",
+              "id": "avg_customer_value"
+            },
+            "role": "measure",
+            "format": {
+              "style": "currency",
+              "currency": "USD",
+              "decimals": 0
+            }
+          }
+        ],
+        "rows": [
+          {
+            "id": "i21",
+            "field": {
+              "kind": "column",
+              "table": "customers",
+              "column": "segment"
+            },
+            "role": "dimension"
+          }
+        ],
+        "tooltip": [],
+        "filters": []
+      }
+    },
+    {
+      "id": "running",
+      "name": "Running total by quarter",
+      "spec": {
+        "chartType": "area",
+        "columns": [
+          {
+            "id": "i23",
+            "field": {
+              "kind": "column",
+              "table": "orders",
+              "column": "order_date"
+            },
+            "role": "dimension",
+            "dateLevel": "quarter"
+          }
+        ],
+        "rows": [
+          {
+            "id": "i24",
+            "field": {
+              "kind": "calc",
+              "id": "running_sales"
+            },
+            "role": "measure",
+            "format": {
+              "style": "compact"
+            }
+          }
+        ],
+        "tooltip": [],
+        "filters": []
+      }
+    }
+  ],
+  "dashboards": [
+    {
+      "id": "overview",
+      "name": "Sales overview",
+      "pages": [
+        {
+          "id": "p_overview",
+          "name": "Overview",
+          "tiles": [
+            {
+              "id": "t_title",
+              "kind": "text",
+              "layout": {
+                "x": 0,
+                "y": 0,
+                "w": 9,
+                "h": 2
+              },
+              "text": "# Harbor & Pine Supply Co.\nFictional sales data, 2023 to 2025. Click a bar, slice or point to cross-filter the page; clear it with the chip at the top."
+            },
+            {
+              "id": "t_kpi",
+              "kind": "worksheet",
+              "layout": {
+                "x": 0,
+                "y": 2,
+                "w": 9,
+                "h": 3
+              },
+              "worksheetId": "kpis"
+            },
+            {
+              "id": "t_region",
+              "kind": "slicer",
+              "layout": {
+                "x": 9,
+                "y": 0,
+                "w": 3,
+                "h": 5
+              },
+              "field": {
+                "kind": "column",
+                "table": "customers",
+                "column": "region"
+              },
+              "slicerType": "list",
+              "title": "Region"
+            },
+            {
+              "id": "t_trend",
+              "kind": "worksheet",
+              "layout": {
+                "x": 0,
+                "y": 5,
+                "w": 8,
+                "h": 6
+              },
+              "worksheetId": "trend"
+            },
+            {
+              "id": "t_dates",
+              "kind": "slicer",
+              "layout": {
+                "x": 8,
+                "y": 5,
+                "w": 4,
+                "h": 3
+              },
+              "field": {
+                "kind": "column",
+                "table": "orders",
+                "column": "order_date"
+              },
+              "slicerType": "dateRange",
+              "title": "Order date"
+            },
+            {
+              "id": "t_segment",
+              "kind": "worksheet",
+              "layout": {
+                "x": 8,
+                "y": 8,
+                "w": 4,
+                "h": 6
+              },
+              "worksheetId": "segment"
+            },
+            {
+              "id": "t_cat",
+              "kind": "worksheet",
+              "layout": {
+                "x": 0,
+                "y": 11,
+                "w": 8,
+                "h": 6
+              },
+              "worksheetId": "category"
+            }
+          ]
+        },
+        {
+          "id": "p_customers",
+          "name": "Customers",
+          "tiles": [
+            {
+              "id": "t_top",
+              "kind": "worksheet",
+              "layout": {
+                "x": 0,
+                "y": 0,
+                "w": 6,
+                "h": 8
+              },
+              "worksheetId": "top"
+            },
+            {
+              "id": "t_value",
+              "kind": "worksheet",
+              "layout": {
+                "x": 6,
+                "y": 0,
+                "w": 6,
+                "h": 4
+              },
+              "worksheetId": "custvalue"
+            },
+            {
+              "id": "t_ratio",
+              "kind": "worksheet",
+              "layout": {
+                "x": 6,
+                "y": 4,
+                "w": 6,
+                "h": 4
+              },
+              "worksheetId": "ratio"
+            },
+            {
+              "id": "t_heat",
+              "kind": "worksheet",
+              "layout": {
+                "x": 0,
+                "y": 8,
+                "w": 12,
+                "h": 7
+              },
+              "worksheetId": "heat"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

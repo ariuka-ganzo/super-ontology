@@ -109,19 +109,7 @@ export type FilterDef =
       direction: 'top' | 'bottom';
     });
 
-export const CHART_TYPES = [
-  'bar',
-  'stackedBar',
-  'line',
-  'area',
-  'scatter',
-  'pie',
-  'donut',
-  'heatmap',
-  'table',
-  'pivot',
-  'kpi'
-] as const;
+export const CHART_TYPES = ['bar', 'stackedBar', 'line', 'area', 'scatter', 'pie', 'donut', 'heatmap', 'table', 'pivot', 'kpi'] as const;
 export type ChartType = (typeof CHART_TYPES)[number];
 
 export interface SortSpec {

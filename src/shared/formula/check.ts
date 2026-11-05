@@ -128,8 +128,7 @@ export function fieldLabel(ref: FieldRef, model: Model): string {
 }
 
 function calcNode(calc: CalcDef, env: Env, at: Span): TNode {
-  if (env.stack.includes(calc.id))
-    throw new FormulaError(`[${calc.name}] refers to itself through other calculations`, at.start, at.end);
+  if (env.stack.includes(calc.id)) throw new FormulaError(`[${calc.name}] refers to itself through other calculations`, at.start, at.end);
   const cached = env.cache.get(calc.id);
   if (cached) return cached;
   env.stack.push(calc.id);
@@ -138,8 +137,7 @@ function calcNode(calc: CalcDef, env: Env, at: Span): TNode {
     env.cache.set(calc.id, node);
     return node;
   } catch (e) {
-    if (e instanceof FormulaError && at.end > at.start)
-      throw new FormulaError(`Calculation [${calc.name}] has an error: ${e.message}`, at.start, at.end);
+    if (e instanceof FormulaError && at.end > at.start) throw new FormulaError(`Calculation [${calc.name}] has an error: ${e.message}`, at.start, at.end);
     throw e;
   } finally {
     env.stack.pop();
@@ -199,11 +197,7 @@ function combine2(a: Level, n: TNode, span: Span): Level {
   const pair = new Set([a, b]);
   if (pair.has('agg') && pair.has('tcalc')) return 'tcalc';
   if (pair.has('row') && (pair.has('agg') || pair.has('tcalc')))
-    throw new FormulaError(
-      'Cannot mix aggregate and row-level values. Wrap the row-level field in an aggregate such as SUM or MIN',
-      span.start,
-      span.end
-    );
+    throw new FormulaError('Cannot mix aggregate and row-level values. Wrap the row-level field in an aggregate such as SUM or MIN', span.start, span.end);
   if (pair.has('lod'))
     throw new FormulaError(
       'INCLUDE and EXCLUDE expressions can only be combined with constants or other INCLUDE/EXCLUDE expressions, then aggregated as a whole, for example AVG({INCLUDE [Customer] : SUM([Sales])})',
@@ -225,8 +219,7 @@ function compatible(a: VType, b: VType): boolean {
 function unify(types: VType[], span: Span, what: string): VType {
   let out: VType = 'null';
   for (const t of types) {
-    if (!compatible(out, t))
-      throw new FormulaError(`All ${what} must have the same type, but found ${out} and ${t}`, span.start, span.end);
+    if (!compatible(out, t)) throw new FormulaError(`All ${what} must have the same type, but found ${out} and ${t}`, span.start, span.end);
     if (out === 'null' || (out === 'date' && t === 'datetime')) out = t;
   }
   return out;
@@ -234,11 +227,7 @@ function unify(types: VType[], span: Span, what: string): VType {
 
 function expectType(n: TNode, allowed: VType[], fn: string, argIndex: number): void {
   if (n.vtype === 'null' || allowed.includes(n.vtype)) return;
-  throw new FormulaError(
-    `Argument ${argIndex + 1} of ${fn} must be ${allowed.join(' or ')}, but it is ${n.vtype}`,
-    n.start,
-    n.end
-  );
+  throw new FormulaError(`Argument ${argIndex + 1} of ${fn} must be ${allowed.join(' or ')}, but it is ${n.vtype}`, n.start, n.end);
 }
 
 function check(node: Node, env: Env): TNode {
@@ -271,7 +260,11 @@ function check(node: Node, env: Env): TNode {
       let vtype: VType;
       switch (node.op) {
         case '+':
-          if ((left.vtype === 'string' || left.vtype === 'null') && (right.vtype === 'string' || right.vtype === 'null') && (left.vtype === 'string' || right.vtype === 'string'))
+          if (
+            (left.vtype === 'string' || left.vtype === 'null') &&
+            (right.vtype === 'string' || right.vtype === 'null') &&
+            (left.vtype === 'string' || right.vtype === 'string')
+          )
             vtype = 'string';
           else {
             numericOperands(left, right, '+');
@@ -291,8 +284,7 @@ function check(node: Node, env: Env): TNode {
           vtype = 'boolean';
           break;
         default:
-          if (!compatible(left.vtype, right.vtype))
-            throw new FormulaError(`Cannot compare ${left.vtype} with ${right.vtype}`, node.start, node.end);
+          if (!compatible(left.vtype, right.vtype)) throw new FormulaError(`Cannot compare ${left.vtype} with ${right.vtype}`, node.start, node.end);
           vtype = 'boolean';
       }
       return { t: 'binary', op: node.op, left, right, vtype, level, start: node.start, end: node.end };
@@ -346,7 +338,11 @@ function containsKind(n: TNode, pred: (n: TNode) => boolean): boolean {
     case 'if':
       return n.branches.some((b) => containsKind(b.cond, pred) || containsKind(b.then, pred)) || (!!n.else && containsKind(n.else, pred));
     case 'case':
-      return containsKind(n.subject, pred) || n.whens.some((w) => containsKind(w.match, pred) || containsKind(w.then, pred)) || (!!n.else && containsKind(n.else, pred));
+      return (
+        containsKind(n.subject, pred) ||
+        n.whens.some((w) => containsKind(w.match, pred) || containsKind(w.then, pred)) ||
+        (!!n.else && containsKind(n.else, pred))
+      );
     case 'lod':
       return n.dims.some((d) => containsKind(d, pred)) || containsKind(n.body, pred);
     default:
@@ -391,11 +387,7 @@ function checkLod(node: Extract<Node, { type: 'lod' }>, env: Env): TNode {
   }
   const body = check(node.body, env);
   if (body.level !== 'agg')
-    throw new FormulaError(
-      `The part after ':' in a ${node.kind} expression must be an aggregate, for example SUM([Sales])`,
-      body.start,
-      body.end
-    );
+    throw new FormulaError(`The part after ':' in a ${node.kind} expression must be an aggregate, for example SUM([Sales])`, body.start, body.end);
   if (containsKind(body, (n) => n.t === 'lod' && n.kind !== 'FIXED'))
     throw new FormulaError('INCLUDE and EXCLUDE cannot be nested inside another level of detail expression', body.start, body.end);
   if (node.kind !== 'FIXED' && containsKind(body, (n) => n.t === 'lod'))
@@ -436,15 +428,9 @@ function checkCall(node: Extract<Node, { type: 'call' }>, env: Env): TNode {
   if (AGGREGATES.has(name)) {
     arity(node, 1);
     const a = args[0];
-    if (a.level === 'agg' || a.level === 'tcalc')
-      throw new FormulaError(`${name} cannot be applied to a value that is already aggregated`, a.start, a.end);
+    if (a.level === 'agg' || a.level === 'tcalc') throw new FormulaError(`${name} cannot be applied to a value that is already aggregated`, a.start, a.end);
     if (containsKind(a, (n) => n.t === 'lod' && n.kind !== 'FIXED')) {
-      if (colOutsideLod(a))
-        throw new FormulaError(
-          `Inside ${name}, an INCLUDE or EXCLUDE expression can only be combined with constants`,
-          a.start,
-          a.end
-        );
+      if (colOutsideLod(a)) throw new FormulaError(`Inside ${name}, an INCLUDE or EXCLUDE expression can only be combined with constants`, a.start, a.end);
     }
     if (name === 'SUM' || name === 'AVG' || name === 'MEDIAN') expectType(a, ['number'], name, 0);
     if (name === 'MIN' || name === 'MAX') expectType(a, ['number', 'string', 'date', 'datetime'], name, 0);

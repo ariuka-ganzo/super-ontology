@@ -40,9 +40,19 @@ describe('relationship suggestions', () => {
   it('matches same-named keys and table-named ids', () => {
     const model: Model = {
       tables: [
-        t('o', 'Orders', [['order_id', 'integer'], ['customer_id', 'integer'], ['Product Code', 'string']]),
-        t('c', 'Customers', [['id', 'integer'], ['name', 'string']]),
-        t('p', 'Products', [['product_code', 'string'], ['name', 'string']])
+        t('o', 'Orders', [
+          ['order_id', 'integer'],
+          ['customer_id', 'integer'],
+          ['Product Code', 'string']
+        ]),
+        t('c', 'Customers', [
+          ['id', 'integer'],
+          ['name', 'string']
+        ]),
+        t('p', 'Products', [
+          ['product_code', 'string'],
+          ['name', 'string']
+        ])
       ],
       relationships: [],
       calcs: []

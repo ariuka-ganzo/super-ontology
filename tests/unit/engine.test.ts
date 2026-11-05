@@ -20,13 +20,26 @@ beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'facet-engine-'));
   writeFileSync(join(dir, 'a.csv'), 'id,name,amount,day,flag\n1,Ann,10.5,2024-01-01,true\n2,"Bob, Jr.",20,2024-01-02,false\n3,,30,,true\n');
   writeFileSync(join(dir, 'b.tsv'), 'id\tcity\n1\tOslo\n2\tLima\n');
-  writeFileSync(join(dir, 'c.json'), JSON.stringify([{ id: 1, tags: ['x', 'y'], nested: { a: 1 } }, { id: 2, tags: [], nested: { a: 2 } }]));
+  writeFileSync(
+    join(dir, 'c.json'),
+    JSON.stringify([
+      { id: 1, tags: ['x', 'y'], nested: { a: 1 } },
+      { id: 2, tags: [], nested: { a: 2 } }
+    ])
+  );
   const w = await DuckDBInstance.create(':memory:');
   const wc = await w.connect();
   await wc.run(`COPY (SELECT range AS id, range * 2 AS twice FROM range(5)) TO '${join(dir, 'd.parquet').replace(/'/g, "''")}' (FORMAT parquet)`);
   wc.closeSync();
   await writeXlsxFile([
-    { sheet: 'First', data: [['Product', 'Price', 'When', 'Price'], ['Pen', 1.5, { value: new Date(Date.UTC(2024, 4, 1)), format: 'yyyy-mm-dd' }, 2], ['Ink', 3, { value: new Date(Date.UTC(2024, 4, 2)), format: 'yyyy-mm-dd' }, 4]] },
+    {
+      sheet: 'First',
+      data: [
+        ['Product', 'Price', 'When', 'Price'],
+        ['Pen', 1.5, { value: new Date(Date.UTC(2024, 4, 1)), format: 'yyyy-mm-dd' }, 2],
+        ['Ink', 3, { value: new Date(Date.UTC(2024, 4, 2)), format: 'yyyy-mm-dd' }, 4]
+      ]
+    },
     { sheet: 'Second', data: [['only'], ['x']] }
   ]).toFile(join(dir, 'e.xlsx'));
 });

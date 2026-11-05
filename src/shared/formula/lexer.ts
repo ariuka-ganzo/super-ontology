@@ -1,20 +1,6 @@
 import { FormulaError } from './ast';
 
-export type TokenKind =
-  | 'num'
-  | 'str'
-  | 'field'
-  | 'date'
-  | 'ident'
-  | 'op'
-  | '('
-  | ')'
-  | ','
-  | '{'
-  | '}'
-  | ':'
-  | '.'
-  | 'eof';
+export type TokenKind = 'num' | 'str' | 'field' | 'date' | 'ident' | 'op' | '(' | ')' | ',' | '{' | '}' | ':' | '.' | 'eof';
 
 export interface Token {
   kind: TokenKind;

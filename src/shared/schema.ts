@@ -79,7 +79,10 @@ export const modelSchema = z.object({
 const numberFormat = z.object({
   style: z.enum(['auto', 'number', 'percent', 'currency', 'compact']),
   decimals: z.number().int().min(0).max(10).optional(),
-  currency: z.string().regex(/^[A-Z]{3}$/).optional()
+  currency: z
+    .string()
+    .regex(/^[A-Z]{3}$/)
+    .optional()
 });
 
 export const shelfItemSchema = z.object({
@@ -130,7 +133,16 @@ export const projectSchema = z.object({
   model: modelSchema,
   worksheets: z.array(z.object({ id, name, spec: vizSpecSchema })).max(1000),
   dashboards: z
-    .array(z.object({ id, name, pages: z.array(z.object({ id, name, tiles: z.array(tileSchema).max(200) })).min(1).max(100) }))
+    .array(
+      z.object({
+        id,
+        name,
+        pages: z
+          .array(z.object({ id, name, tiles: z.array(tileSchema).max(200) }))
+          .min(1)
+          .max(100)
+      })
+    )
     .max(200),
   theme: z.enum(['light', 'dark']).optional()
 });

@@ -48,17 +48,7 @@ export interface StartupInfo {
   version: string;
 }
 
-export type MenuAction =
-  | 'new'
-  | 'open'
-  | 'save'
-  | 'saveAs'
-  | 'import'
-  | 'undo'
-  | 'redo'
-  | 'openSample'
-  | 'toggleTheme'
-  | 'about';
+export type MenuAction = 'new' | 'open' | 'save' | 'saveAs' | 'import' | 'undo' | 'redo' | 'openSample' | 'toggleTheme' | 'about';
 
 export interface QueryRequest {
   requestId: string;

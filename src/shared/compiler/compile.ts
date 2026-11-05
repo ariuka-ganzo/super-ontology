@@ -14,29 +14,8 @@
  * Identifiers are always quoted and values are always bound parameters.
  */
 import { FormulaError } from '../formula/ast';
-import {
-  AGGREGATES,
-  TABLE_CALCS,
-  fieldLabel,
-  fieldNode,
-  walk,
-  type TNode,
-  type VType
-} from '../formula/check';
-import type {
-  AggFn,
-  DataType,
-  DateLevel,
-  FieldRef,
-  FilterDef,
-  Model,
-  OutputColumn,
-  Relationship,
-  Scalar,
-  ShelfItem,
-  TableDef,
-  VizSpec
-} from '../types';
+import { AGGREGATES, TABLE_CALCS, fieldLabel, fieldNode, walk, type TNode, type VType } from '../formula/check';
+import type { AggFn, DataType, DateLevel, FieldRef, FilterDef, Model, OutputColumn, Relationship, Scalar, ShelfItem, TableDef, VizSpec } from '../types';
 import { Params, engineTableName, numberType, quoteIdent as q, sqlType } from './sql';
 
 export class CompileError extends Error {
@@ -208,7 +187,10 @@ class Compiler {
       if (item.role === 'dimension') {
         const d = this.dims.find((x) => x.item === item) as DimInfo;
         const node = this.node(() => fieldNode(item.field, model));
-        outputs.push({ col: { key: item.id, alias, role: 'dimension', type: outType(node, item.dateLevel), label, dateLevel: item.dateLevel }, sql: q(d.alias) });
+        outputs.push({
+          col: { key: item.id, alias, role: 'dimension', type: outType(node, item.dateLevel), label, dateLevel: item.dateLevel },
+          sql: q(d.alias)
+        });
       } else {
         const node = this.node(() => measureNode(item.field, item.agg, model));
         outputs.push({ col: { key: item.id, alias, role: 'measure', type: outType(node), label }, sql: this.aggSql(node) });
@@ -243,10 +225,7 @@ class Compiler {
     const root = this.pickRoot(viewTables);
     const reach = this.reachable(root);
     for (const t of viewTables)
-      if (!reach.has(t))
-        throw new CompileError(
-          `${this.tableName(t)} is not related to ${this.tableName(root)}. Add a relationship in the Model view`
-        );
+      if (!reach.has(t)) throw new CompileError(`${this.tableName(t)} is not related to ${this.tableName(root)}. Add a relationship in the Model view`);
     for (const f of this.opts.externalFilters ?? []) {
       if (f.kind === 'measure' || f.kind === 'topN') continue;
       const tables = this.filterTables(f);
@@ -430,8 +409,7 @@ class Compiler {
       case 'DATEADD': {
         const unit = part(0);
         const amount = `CAST(${sub(a[1])} AS INTEGER)`;
-        const interval =
-          unit === 'quarter' ? `to_months(3 * ${amount})` : `${INTERVAL_FN[unit as keyof typeof INTERVAL_FN]}(${amount})`;
+        const interval = unit === 'quarter' ? `to_months(3 * ${amount})` : `${INTERVAL_FN[unit as keyof typeof INTERVAL_FN]}(${amount})`;
         const t = n.vtype === 'datetime' ? 'TIMESTAMP' : 'DATE';
         return `CAST(${sub(a[2])} + ${interval} AS ${t})`;
       }
@@ -460,8 +438,7 @@ class Compiler {
       if (stage === 'context') this.fail('Context filters run before FIXED expressions, so they cannot use one');
       return this.fixedLod(n, stage);
     }
-    if (n.t === 'call' && (AGGREGATES.has(n.name) || TABLE_CALCS.has(n.name)))
-      this.fail('An aggregate cannot be used where a row-level value is needed');
+    if (n.t === 'call' && (AGGREGATES.has(n.name) || TABLE_CALCS.has(n.name))) this.fail('An aggregate cannot be used where a row-level value is needed');
     return this.emit(n, (c) => this.rowSql(c, stage));
   }
 
@@ -517,8 +494,7 @@ class Compiler {
     });
     const grain = this.grainFor(lods[0]);
     for (const l of lods.slice(1))
-      if (this.grainFor(l).join(',') !== grain.join(','))
-        this.fail('One aggregate cannot combine INCLUDE/EXCLUDE expressions with different dimensions');
+      if (this.grainFor(l).join(',') !== grain.join(',')) this.fail('One aggregate cannot combine INCLUDE/EXCLUDE expressions with different dimensions');
     const gkey = grain.join(',');
     let group = this.grains.get(gkey);
     if (!group) {
@@ -692,8 +668,7 @@ class Compiler {
       const need = tableCols.get(tid) as Set<string>;
       const list = table.columns.filter((c) => need.has(c.name));
       for (const name of need)
-        if (!table.columns.some((c) => c.name === name))
-          this.fail(`${this.tableName(tid)} has no column ${name}. Reload the table or fix the relationship`);
+        if (!table.columns.some((c) => c.name === name)) this.fail(`${this.tableName(tid)} has no column ${name}. Reload the table or fix the relationship`);
       const select = list.length
         ? list.map((c) => (c.override && c.override !== c.type ? `TRY_CAST(${q(c.name)} AS ${sqlType(c.override)}) AS ${q(c.name)}` : q(c.name))).join(', ')
         : '1 AS "__none"';
@@ -785,9 +760,7 @@ class Compiler {
         );
         lk = `lk${i}`;
       }
-      ctes.push(
-        `${q(`la${i}`)} AS (SELECT ${[...uniqV, ...g.outer.map((o) => `${o.sql} AS ${q(o.alias)}`)].join(', ')} FROM ${q(lk)}${groupBy})`
-      );
+      ctes.push(`${q(`la${i}`)} AS (SELECT ${[...uniqV, ...g.outer.map((o) => `${o.sql} AS ${q(o.alias)}`)].join(', ')} FROM ${q(lk)}${groupBy})`);
       const on = uniqV.map((c) => `"agg".${c} IS NOT DISTINCT FROM ${q(`la${i}`)}.${c}`).join(' AND ');
       laJoins.push(on ? `LEFT JOIN ${q(`la${i}`)} ON ${on}` : `CROSS JOIN ${q(`la${i}`)}`);
       for (const o of g.outer) laCols.push(`${q(`la${i}`)}.${q(o.alias)}`);
@@ -824,11 +797,8 @@ class Compiler {
     const a = this.tableName(parent);
     const b = this.tableName(child);
     if (card === 'many-to-many')
-      this.warnings.push(
-        `${a} and ${b} have a many-to-many relationship. Joining them can multiply rows, so sums and counts may be inflated`
-      );
-    else if (card === 'one-to-many')
-      this.warnings.push(`Each ${a} row can match several ${b} rows, so values from ${a} may be counted more than once`);
+      this.warnings.push(`${a} and ${b} have a many-to-many relationship. Joining them can multiply rows, so sums and counts may be inflated`);
+    else if (card === 'one-to-many') this.warnings.push(`Each ${a} row can match several ${b} rows, so values from ${a} may be counted more than once`);
   }
 }
 
@@ -886,12 +856,7 @@ function outType(n: TNode, level?: DateLevel): DataType {
   return n.vtype;
 }
 
-export function buildPredicate(
-  f: Exclude<FilterDef, { kind: 'measure' | 'topN' }>,
-  expr: string,
-  type: string,
-  p: Params
-): string {
+export function buildPredicate(f: Exclude<FilterDef, { kind: 'measure' | 'topN' }>, expr: string, type: string, p: Params): string {
   if (f.kind === 'values') {
     const nonNull = f.values.filter((v) => v !== null);
     const hasNull = nonNull.length !== f.values.length;

@@ -136,9 +136,7 @@ describe('basic aggregation', () => {
   });
 
   it('supports COUNT, COUNTD, AVG, MIN, MAX and MEDIAN', async () => {
-    const items = (['COUNT', 'COUNTD', 'AVG', 'MIN', 'MAX', 'MEDIAN'] as AggFn[]).map((a) =>
-      meas('orders', a === 'COUNTD' ? 'cust' : 'sales', a)
-    );
+    const items = (['COUNT', 'COUNTD', 'AVG', 'MIN', 'MAX', 'MEDIAN'] as AggFn[]).map((a) => meas('orders', a === 'COUNTD' ? 'cust' : 'sales', a));
     const { rows } = await db.viz({ rows: items });
     expect(rows[0]).toEqual({
       [items[0].id]: 6,
@@ -256,7 +254,11 @@ describe('filters and pipeline order', () => {
     const s = meas('orders', 'sales');
     const inc = await db.viz({ columns: [r], rows: [s], filters: [{ id: 'f', kind: 'values', field: col('orders', 'region'), values: ['East', 'West'] }] });
     expect(inc.rows.map((x) => x[r.id])).toEqual(['East', 'West']);
-    const exc = await db.viz({ columns: [r], rows: [s], filters: [{ id: 'f', kind: 'values', field: col('orders', 'region'), values: ['East'], exclude: true }] });
+    const exc = await db.viz({
+      columns: [r],
+      rows: [s],
+      filters: [{ id: 'f', kind: 'values', field: col('orders', 'region'), values: ['East'], exclude: true }]
+    });
     expect(exc.rows.map((x) => x[r.id])).toEqual(['North', 'West']);
     const none = await db.viz({ columns: [r], rows: [s], filters: [{ id: 'f', kind: 'values', field: col('orders', 'region'), values: [] }] });
     expect(none.rows).toEqual([]);
@@ -488,7 +490,12 @@ describe('table calculations', () => {
     const m = dim('orders', 'order_date', 'month');
     const r = dim('orders', 'region');
     const run = calcItem('run');
-    const { rows } = await db.viz({ columns: [m], rows: [run], color: r, filters: [{ id: 'f', kind: 'values', field: col('orders', 'region'), values: ['East'] }] });
+    const { rows } = await db.viz({
+      columns: [m],
+      rows: [run],
+      color: r,
+      filters: [{ id: 'f', kind: 'values', field: col('orders', 'region'), values: ['East'] }]
+    });
     // East by month: Jan 100, Feb 200, Mar 300.
     expect(rows.map((x) => x[run.id])).toEqual([100, 300, 600]);
   });
