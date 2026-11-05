@@ -202,8 +202,9 @@ describe('queries', () => {
         filters: []
       }
     };
-    let ticks = 0;
-    const timer = setInterval(() => ticks++, 10);
+    // Record when the event loop gets to run while DuckDB works on its own threads.
+    const ticks: number[] = [];
+    const timer = setInterval(() => ticks.push(Date.now()), 10);
     const started = Date.now();
     const p = engine.query(request);
     setTimeout(() => engine.cancel('slow1'), 300);
@@ -211,8 +212,10 @@ describe('queries', () => {
     clearInterval(timer);
     const elapsed = Date.now() - started;
     expect(elapsed).toBeLessThan(5000);
-    // The event loop kept running while DuckDB worked.
-    expect(ticks).toBeGreaterThan(10);
+    // The event loop kept running while DuckDB worked: it ran repeatedly and was never blocked for long.
+    expect(ticks.length).toBeGreaterThanOrEqual(3);
+    const gaps = ticks.slice(1).map((t, i) => t - ticks[i]);
+    expect(Math.max(...gaps, ticks[0] - started)).toBeLessThan(250);
     await engine.dropTable('big');
   });
 });

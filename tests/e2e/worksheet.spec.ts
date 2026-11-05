@@ -85,3 +85,61 @@ test('date drill, sort, filter and a calculated field', async () => {
   await expect.poll(() => tableRows(box)).toEqual([['2024 Q1', 'West', '200', '50']]);
   await shot(page, 'worksheet-filtered');
 });
+
+test('every chart type renders, and sorting works', async () => {
+  const { page } = l;
+  await page.getByTestId('field-region').dblclick();
+  await page.getByTestId('field-amount').dblclick();
+  await page.getByTestId('field-units').dblclick();
+  const box = page.getByTestId('chart-box');
+  // Two measures and one dimension: scatter is recommended.
+  await expect(page.getByTestId('recommendation')).toContainText('Scatter');
+  await expect(box.locator('svg path:not([fill="none"])').first()).toBeVisible();
+
+  // Remove units, then try each chart type with one dimension and one measure,
+  // and with a second dimension on Color where the chart needs two.
+  await page.getByTestId('shelf-rows').getByTestId('pill').filter({ hasText: 'units' }).getByLabel('Field options').click();
+  await page.getByRole('menuitem', { name: 'Remove' }).click();
+  for (const type of ['bar', 'line', 'area', 'pie', 'donut', 'table', 'pivot']) {
+    await page.getByTestId(`chart-${type}`).click();
+    await expect(box).toHaveAttribute('data-chart-type', type);
+    await expect(page.getByTestId('view-error')).toHaveCount(0);
+    // A pivot spreads the dimension on Columns across one row.
+    if (type === 'table' || type === 'pivot') await expect(box.locator('table.result tbody tr')).toHaveCount(type === 'table' ? 3 : 1);
+    else await expect(box.locator('svg path:not([fill="none"])').first()).toBeVisible();
+  }
+  await page.getByTestId('field-rep_id').dblclick();
+  for (const type of ['stackedBar', 'heatmap']) {
+    await page.getByTestId(`chart-${type}`).click();
+    await expect(box).toHaveAttribute('data-chart-type', type);
+    await expect(box.locator('svg path:not([fill="none"])').first()).toBeVisible();
+  }
+  await page.getByTestId('shelf-color').getByTestId('pill').getByLabel('Field options').click();
+  await page.getByRole('menuitem', { name: 'Remove' }).click();
+  await page.getByTestId('chart-kpi').click();
+  await expect(page.getByText('does not suit these fields')).toBeVisible();
+  await page.getByTestId('shelf-columns').getByTestId('pill').getByLabel('Field options').click();
+  await page.getByRole('menuitem', { name: 'Remove' }).click();
+  await expect(page.locator('.kpi .value')).toHaveText('1,050');
+
+  // Sort descending by the measure.
+  await page.getByTestId('field-region').dblclick();
+  await page.getByTestId('chart-table').click();
+  await page.getByRole('button', { name: /^Sort/ }).click();
+  await expect
+    .poll(() => tableRows(box))
+    .toEqual([
+      ['East', '550'],
+      ['North', '300'],
+      ['West', '200']
+    ]);
+  await page.getByRole('button', { name: /^Sort/ }).click();
+  await expect
+    .poll(() => tableRows(box))
+    .toEqual([
+      ['West', '200'],
+      ['North', '300'],
+      ['East', '550']
+    ]);
+  await shot(page, 'worksheet-sorted');
+});

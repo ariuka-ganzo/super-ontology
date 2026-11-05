@@ -97,3 +97,30 @@ test('first launch opens the sample project and its dashboard renders', async ()
   await expect(page.getByTestId('view-error')).toHaveCount(0);
   await shot(page, 'sample-customers');
 });
+
+test('date range slicer filters the page', async () => {
+  l = await launch({ firstRun: false });
+  const { page } = l;
+  await importFixtures(l, ['sales.csv']);
+  await page.getByText('Sheet 1').click();
+  await page.getByTestId('field-region').dblclick();
+  await page.getByTestId('field-amount').dblclick();
+  await page.getByTestId('chart-table').click();
+  await page.getByText('Dashboard 1').click();
+  await page.getByRole('button', { name: '+ Add tile' }).click();
+  await page.getByRole('menuitem', { name: 'Worksheet: Sheet 1' }).click();
+  await page.getByRole('button', { name: '+ Add tile' }).click();
+  await page.getByRole('menuitem', { name: 'Slicer…' }).click();
+  await page.getByLabel('Slicer field').selectOption({ label: 'sales.sale_date' });
+  await expect(page.getByLabel('Slicer type')).toHaveValue('dateRange');
+  await page.getByRole('button', { name: 'Add slicer' }).click();
+  const slicer = page.getByTestId('slicer-dateRange');
+  await expect(slicer).toContainText('2024-01-10 to 2024-03-12');
+  await slicer.getByLabel('From').fill('2024-02-01');
+  await slicer.getByLabel('To').fill('2024-02-29');
+  const tile = page.locator('[data-testid="tile-worksheet"][data-title="Sheet 1"]');
+  // February: West 50 + 150.
+  await expect.poll(() => tableRows(tile)).toEqual([['West', '200']]);
+  await slicer.getByRole('button', { name: 'Clear' }).click();
+  await expect.poll(() => tableRows(tile)).toHaveLength(3);
+});
