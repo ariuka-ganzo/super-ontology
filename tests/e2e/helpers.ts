@@ -22,6 +22,7 @@ export async function launch(opts: { firstRun?: boolean } = {}): Promise<Launche
   const exe = process.env['FACET_E2E_EXECUTABLE'];
   const args = exe ? [] : [ROOT];
   if (process.platform === 'linux') args.push('--no-sandbox');
+  if (process.env['FACET_SCREENSHOTS']) args.push('--force-device-scale-factor=2');
   const app = await electron.launch({ executablePath: exe || undefined, args, env: { ...process.env, FACET_USER_DATA: userData, NODE_ENV: 'production' } });
   const page = await app.firstWindow();
   const errors: string[] = [];
