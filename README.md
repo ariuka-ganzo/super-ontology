@@ -175,7 +175,7 @@ A saved calculation is a **calculated column** when it works row by row, or a **
 - No network access: the app blocks every web request that is not one of its own files, and it has no telemetry or update checks.
 - The renderer runs with `contextIsolation`, `sandbox` and no Node integration, under a strict Content Security Policy. The preload script exposes named functions only, and the main process validates every message with a schema and checks that it came from the app's window.
 - The renderer never sends SQL. It sends a description of the view, and the main process compiles it. Every identifier is quoted and every value is a bound parameter; formula text only reaches SQL through the parser.
-- DuckDB runs as two instances. The one that runs queries has file access disabled and its configuration locked, so it cannot read or write files or install extensions. A second instance only runs fixed import statements, with the path of a file you chose bound as a parameter. Extensions are never downloaded.
+- DuckDB runs as two instances. The one that runs queries has file access disabled and its configuration locked, so it cannot read or write files or install extensions. A second instance only runs fixed import statements, with the path of a file you chose bound as a parameter, and only for data file extensions (`.csv`, `.tsv`, `.parquet`, `.json`, `.xlsx` and similar), even when the path comes from a project file. DuckDB extensions are never downloaded.
 - Data values and file names are escaped before they are shown, including in chart tooltips. CSV exports prefix cells that start with `=`, `+`, `-` or `@` with an apostrophe so spreadsheets do not run them as formulas.
 
 ## Known limitations in v0.1

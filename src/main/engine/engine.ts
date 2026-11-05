@@ -13,7 +13,7 @@
 import { DuckDBInstance, type DuckDBConnection, type DuckDBResult, type DuckDBType } from '@duckdb/node-api';
 import { promises as fs } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { extname, join } from 'node:path';
 import type { CardinalityResult, ColumnProfile, ImportResult, PreviewResult, QueryRequest } from '@shared/api';
 import { compileViz, type CompiledQuery } from '@shared/compiler/compile';
 import { duckTypeToDataType, engineTableName, quoteIdent as q, sqlType } from '@shared/compiler/sql';
@@ -26,6 +26,15 @@ const LOCKED = {
   autoinstall_known_extensions: 'false',
   autoload_known_extensions: 'false',
   allow_community_extensions: 'false'
+};
+
+/** File extensions the engine will read for each format. Anything else is refused. */
+export const FORMAT_EXTENSIONS: Record<TableSource['format'], string[]> = {
+  csv: ['.csv', '.txt'],
+  tsv: ['.tsv', '.tab', '.txt'],
+  parquet: ['.parquet', '.pq'],
+  json: ['.json', '.jsonl', '.ndjson'],
+  excel: ['.xlsx']
 };
 
 export class EngineError extends Error {
@@ -71,6 +80,9 @@ export class Engine {
   /** Imports a file into the engine table for `tableId`, replacing any previous data. */
   async importTable(tableId: string, source: TableSource): Promise<ImportResult> {
     const started = Date.now();
+    // Only data files can be imported, whatever path reaches the engine (for example from a project file).
+    if (!FORMAT_EXTENSIONS[source.format]?.includes(extname(source.path).toLowerCase()))
+      throw new EngineError(`${source.path} does not look like a ${source.format.toUpperCase()} file, so it was not imported.`, 'invalid');
     try {
       const st = await fs.stat(source.path);
       if (!st.isFile()) throw new EngineError(`${source.path} is not a file`, 'invalid');

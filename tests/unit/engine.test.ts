@@ -82,6 +82,12 @@ describe('import', () => {
     expect(xl2.rowCount).toBe(1);
   });
 
+  it('refuses files that are not data files', async () => {
+    writeFileSync(join(dir, 'secret'), 'not,data\n1,2\n');
+    await expect(engine.importTable('s', { path: join(dir, 'secret'), format: 'csv' })).rejects.toMatchObject({ code: 'invalid' });
+    await expect(engine.importTable('s', { path: join(dir, 'a.csv'), format: 'parquet' })).rejects.toThrow(/does not look like a PARQUET file/);
+  });
+
   it('gives a clear error for a missing file', async () => {
     await expect(engine.importTable('z', { path: join(dir, 'nope.csv'), format: 'csv' })).rejects.toMatchObject({ code: 'missing' });
   });

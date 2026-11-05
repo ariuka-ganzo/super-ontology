@@ -130,8 +130,7 @@ export const useStore = create<State>((set, get) => ({
       worksheetId: ws,
       dashboardId: db?.id ?? null,
       pageId: db?.pages[0]?.id ?? null,
-      tableId: project.model.tables[0]?.id ?? null,
-      theme: project.theme ?? get().theme
+      tableId: project.model.tables[0]?.id ?? null
     });
   },
   markSaved(path) {
@@ -158,13 +157,8 @@ export const useStore = create<State>((set, get) => ({
     } catch {
       // Storage can be unavailable; the theme still applies for this session.
     }
+    // The theme is a per-user preference, so it is not saved in (or loaded from) project files.
     set({ theme });
-    get().update(
-      (p) => {
-        p.theme = theme;
-      },
-      { history: false }
-    );
   },
   toast(kind, text) {
     const id = newId('t');
