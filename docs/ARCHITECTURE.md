@@ -122,6 +122,19 @@ samples/  docs/
 
 GitHub Actions builds a Windows NSIS installer, a macOS dmg and a Linux AppImage on version tags. Installers are unsigned at first, so document the Windows SmartScreen and macOS Gatekeeper warnings in the README.
 
+## Implementation notes (v0.1)
+
+Decisions made while building v0.1, where the spec above left room:
+
+- **Two DuckDB instances.** DuckDB cannot widen `allowed_paths` once external access is disabled, so the engine uses two instances. The query instance holds the data and runs compiled queries with `enable_external_access = false` and `lock_configuration = true`. A reader instance runs only fixed import statements (`read_csv`, `read_parquet`, `read_json_auto`) with the user-chosen path bound as a parameter, and streams data chunks into the query instance through an appender. Neither instance installs or loads extensions; Parquet and JSON readers are built in.
+- **Excel** is read with `read-excel-file` (MIT, no known advisories at the time of writing), written to a temporary CSV and imported like any CSV, so types are inferred the same way. Only the sheet being imported is parsed; sheet names come from `xl/workbook.xml` alone (unzipped with `fflate`, MIT). No DuckDB extension is downloaded.
+- **Top N filters** follow Tableau's order: they rank rows that passed context filters, at the same step as the worksheet's other dimension filters, and the results are intersected. "Top 5 products in the East" therefore needs the region filter marked as a context filter. Dashboard slicers and cross-filters cannot be marked as context, so they apply before Top N ranking.
+- **INCLUDE and EXCLUDE** are computed after dimension filters. An aggregate over them is computed at the expression's grain (`lg` CTE), joined to the view's distinct marks (`lk`), then aggregated to the view (`la`). One aggregate cannot mix expressions with different dimensions.
+- **Table calculations** address the first dimension on Columns, then Rows, then Color, and partition by every other dimension in the view.
+- **Many-to-many and one-to-many joins** are reported as compiler warnings and shown above the chart. The join root is the largest table the view uses, which is usually the fact table.
+- **Chart rendering** uses the ECharts SVG renderer up to 3,000 marks (crisp output and individually addressable marks for testing) and the canvas renderer above that. PNG export always renders an offscreen canvas copy.
+- **Packaging** unpacks `node_modules/@duckdb/**` from the asar and leaves out the musl build. `--smoke-test` loads the packaged DuckDB binary, imports the bundled sample and exits, which CI runs on Windows, macOS and Linux.
+
 ## Out of scope for v0.1
 
 Live database connectors, data preparation steps, maps, importing other vendors' files, DAX or M compatibility, sharing server, row-level security, AI features.

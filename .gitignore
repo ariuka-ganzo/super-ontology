@@ -14,3 +14,4 @@ Thumbs.db
 *.duckdb
 *.duckdb.wal
 .claude/settings.local.json
+*.tsbuildinfo

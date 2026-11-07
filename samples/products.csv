@@ -1,0 +1,122 @@
+product_id,product_name,category,subcategory,list_price,unit_cost
+P001,Ulor Chair Lite,Furniture,Chairs,465.18,388.33
+P002,Nelkel Chair Plus,Furniture,Chairs,306.28,233.7
+P003,Yarjor Chair Lite,Furniture,Chairs,307.63,274.88
+P004,Venlin Chair One,Furniture,Chairs,326.95,264.27
+P005,Holyar Chair One,Furniture,Chairs,295.94,214.15
+P006,Prapra Chair Plus,Furniture,Chairs,334.71,245.7
+P007,Kelor Chair Classic,Furniture,Chairs,238.71,176.88
+P008,Orjor Desk Max,Furniture,Desks,554.94,434.79
+P009,Morgal Desk Plus,Furniture,Desks,358.05,303.11
+P010,Holmor Desk S,Furniture,Desks,238.07,194.49
+P011,Beltor Desk Air,Furniture,Desks,554.05,495.91
+P012,Holsel Desk Max,Furniture,Desks,227.72,196.69
+P013,Torkel Desk Air,Furniture,Desks,735.49,618.66
+P014,Danpra Desk Plus,Furniture,Desks,755.71,659.09
+P015,Holsel Desk S,Furniture,Desks,627.03,549.64
+P016,Fenpra Desk X,Furniture,Desks,868.09,658.74
+P017,Coror Shelving X,Furniture,Shelving,238.76,168.66
+P018,Belgal Shelving One,Furniture,Shelving,80.55,67.15
+P019,Gallin Shelving Classic,Furniture,Shelving,71.52,61.56
+P020,Yarnel Shelving Plus,Furniture,Shelving,296.47,235.3
+P021,Selpra Shelving Max,Furniture,Shelving,246.84,189.2
+P022,Beltor Shelving S,Furniture,Shelving,85.93,65.08
+P023,Jorquin Shelving One,Furniture,Shelving,276.07,211.51
+P024,Fenkel Lighting Plus,Furniture,Lighting,79.11,60.54
+P025,Orhol Lighting Air,Furniture,Lighting,173.75,149.43
+P026,Jorkel Lighting X,Furniture,Lighting,114.33,96.16
+P027,Jorzen Lighting Plus,Furniture,Lighting,74.14,53.36
+P028,Danpra Lighting Classic,Furniture,Lighting,42.67,30
+P029,Moror Lighting Classic,Furniture,Lighting,98.93,79.18
+P030,Quinsel Lighting Classic,Furniture,Lighting,124.85,97.41
+P031,Corsel Paper One,Office Supplies,Paper,24.38,15.28
+P032,Aryar Paper Max,Office Supplies,Paper,18.29,11.28
+P033,Praul Paper Air,Office Supplies,Paper,19.33,12.37
+P034,Morkel Paper X,Office Supplies,Paper,13.78,6.4
+P035,Orjor Paper X,Office Supplies,Paper,15.24,7.88
+P036,Arwil Paper One,Office Supplies,Paper,15.55,10.15
+P037,Holcor Paper Plus,Office Supplies,Paper,7.21,3.44
+P038,Holbel Paper Plus,Office Supplies,Paper,22.74,13.3
+P039,Rostor Paper S,Office Supplies,Paper,29.38,14.85
+P040,Venis Paper Classic,Office Supplies,Paper,16.71,11.24
+P041,Zenis Binder Plus,Office Supplies,Binders,7.01,3.71
+P042,Holis Binder One,Office Supplies,Binders,11.11,6.27
+P043,Yarel Binder Lite,Office Supplies,Binders,18.09,11.97
+P044,Zenven Binder Plus,Office Supplies,Binders,3.14,2.17
+P045,Selel Binder Max,Office Supplies,Binders,19.68,13.15
+P046,Yarcor Binder Plus,Office Supplies,Binders,6.15,3.81
+P047,Torkel Binder Lite,Office Supplies,Binders,10.09,4.81
+P048,Fenis Binder X,Office Supplies,Binders,22.2,15.03
+P049,Galyar Binder Plus,Office Supplies,Binders,21.38,10.29
+P050,Nelnel Binder Pro,Office Supplies,Binders,9.78,6.04
+P051,Isdan Binder X,Office Supplies,Binders,18.65,11.01
+P052,Toryar Pen S,Office Supplies,Pens,16.15,8.14
+P053,Ular Pen Pro,Office Supplies,Pens,7.23,3.58
+P054,Coryar Pen Classic,Office Supplies,Pens,11.03,5.66
+P055,Morquin Pen Pro,Office Supplies,Pens,11.33,5.98
+P056,Yaror Pen X,Office Supplies,Pens,10.46,4.8
+P057,Venlin Pen X,Office Supplies,Pens,15.47,10.78
+P058,Nelul Pen One,Office Supplies,Pens,9.57,4.72
+P059,Galnel Pen One,Office Supplies,Pens,13.69,7.31
+P060,Wilar Storage Lite,Office Supplies,Storage,12.58,6.2
+P061,Rosmor Storage Max,Office Supplies,Storage,31,14.43
+P062,Arul Storage Classic,Office Supplies,Storage,21.98,12.05
+P063,Holcor Storage Max,Office Supplies,Storage,41.59,27.33
+P064,Elquin Storage Pro,Office Supplies,Storage,36.67,22.05
+P065,Fennel Storage Max,Office Supplies,Storage,46.86,22.4
+P066,Orgal Storage X,Office Supplies,Storage,44.84,22.62
+P067,Linros Storage One,Office Supplies,Storage,57.93,28.12
+P068,Linlin Storage Pro,Office Supplies,Storage,19.37,13.29
+P069,Linkel Monitor One,Technology,Monitors,499.27,400.53
+P070,Venzen Monitor Pro,Technology,Monitors,515.5,371.29
+P071,Rosven Monitor Air,Technology,Monitors,216.72,170.55
+P072,Ismor Monitor Max,Technology,Monitors,300.45,234.94
+P073,Venis Monitor Pro,Technology,Monitors,441.97,353.86
+P074,Rosfen Monitor One,Technology,Monitors,341.13,258.89
+P075,Zensel Keyboard Classic,Technology,Keyboards,82.07,55.77
+P076,Selpra Keyboard Max,Technology,Keyboards,46.77,36.66
+P077,Morpra Keyboard One,Technology,Keyboards,110.73,83.21
+P078,Fenis Keyboard S,Technology,Keyboards,111.52,91.23
+P079,Keldan Keyboard S,Technology,Keyboards,20.14,14.97
+P080,Zenven Keyboard Classic,Technology,Keyboards,62.25,48.77
+P081,Wilnel Keyboard Lite,Technology,Keyboards,70.09,54.8
+P082,Nelven Keyboard Max,Technology,Keyboards,146.93,101.74
+P083,Joror Keyboard S,Technology,Keyboards,100.86,80.95
+P084,Venhol Headset Plus,Technology,Headsets,190.17,133.15
+P085,Rosfen Headset Max,Technology,Headsets,231.24,181.09
+P086,Selquin Headset Air,Technology,Headsets,139.33,102.78
+P087,Linis Headset Pro,Technology,Headsets,96.31,71.46
+P088,Galkel Headset Pro,Technology,Headsets,51.81,38.71
+P089,Morel Headset Plus,Technology,Headsets,203.16,151.06
+P090,Galul Headset X,Technology,Headsets,187.62,139.53
+P091,Corjor Headset Max,Technology,Headsets,95.83,78.18
+P092,Kelven Headset S,Technology,Headsets,69.58,54.79
+P093,Isfen Printer Plus,Technology,Printers,188.84,149.9
+P094,Holdan Printer Air,Technology,Printers,315.88,231.83
+P095,Isyar Printer S,Technology,Printers,249.41,179.28
+P096,Danquin Printer X,Technology,Printers,92.54,71.61
+P097,Oris Printer S,Technology,Printers,405.81,319.61
+P098,Linjor Printer Classic,Technology,Printers,361.03,286.52
+P099,Holfen Printer S,Technology,Printers,518.74,408.21
+P100,Prafen Printer X,Technology,Printers,94.61,72.84
+P101,Vengal Planter S,Outdoor,Planters,28.04,15.16
+P102,Beltor Planter One,Outdoor,Planters,63.3,31.29
+P103,Zenul Planter X,Outdoor,Planters,67.09,35.46
+P104,Kelhol Planter Plus,Outdoor,Planters,102.99,58.77
+P105,Vencor Planter Pro,Outdoor,Planters,101.92,54.36
+P106,Ulzen Planter S,Outdoor,Planters,75.62,45.89
+P107,Orsel Grill One,Outdoor,Grills,680.06,436.81
+P108,Orven Grill Pro,Outdoor,Grills,614.32,285.55
+P109,Arven Grill Plus,Outdoor,Grills,699.86,438.52
+P110,Belgal Grill Classic,Outdoor,Grills,473.87,297.5
+P111,Morfen Grill One,Outdoor,Grills,443.66,255.29
+P112,Keljor Grill One,Outdoor,Grills,632.69,373.7
+P113,Danis Grill Pro,Outdoor,Grills,323.16,205.59
+P114,Quinjor Grill Classic,Outdoor,Grills,375.9,217.92
+P115,Fenar Tent S,Outdoor,Tents,252.86,117.46
+P116,Seltor Tent One,Outdoor,Tents,286.79,169.92
+P117,Orquin Tent S,Outdoor,Tents,361.36,209.64
+P118,Keljor Tent Max,Outdoor,Tents,386.89,193.65
+P119,Fentor Tent Pro,Outdoor,Tents,184.65,112.38
+P120,Wiljor Tent Lite,Outdoor,Tents,397.1,202.46
+P121,Joror Tent Pro,Outdoor,Tents,165.68,91.46
