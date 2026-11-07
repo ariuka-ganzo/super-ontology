@@ -139,7 +139,7 @@ The core is a compiler, in `src/shared/compiler`, that turns a view (the fields 
 2. Joins from model relationships, including only the tables the view needs
 3. Context filters
 4. `FIXED` expressions
-5. Dimension filters, slicers and cross-filters, then Top N filters
+5. Dashboard slicers and cross-filters, then the worksheet's dimension filters and Top N filters together. As in Tableau, Top N ranks only rows that passed the earlier steps, so to get "top 10 within a region", make the region filter a context filter
 6. Aggregation at the level of detail set by the shelves (`INCLUDE` and `EXCLUDE` are computed here)
 7. Measure filters
 8. Table calculations, then sort and row limit
