@@ -197,7 +197,8 @@ export class Engine {
         const bins = 20;
         const r = await c.runAndReadAll(
           `WITH b AS (SELECT MIN(${v}) AS lo, MAX(${v}) AS hi FROM ${src})
-           SELECT LEAST(CAST(FLOOR((${v} - b.lo) / NULLIF(b.hi - b.lo, 0) * $1) AS INTEGER), $1 - 1) AS bin, COUNT(*), ANY_VALUE(b.lo), ANY_VALUE(b.hi)
+           SELECT CASE WHEN b.hi = b.lo THEN 0 ELSE LEAST(CAST(FLOOR((${v} - b.lo) / (b.hi - b.lo) * $1) AS INTEGER), $1 - 1) END AS bin,
+             COUNT(*), ANY_VALUE(b.lo), ANY_VALUE(b.hi)
            FROM ${src}, b WHERE ${x} IS NOT NULL GROUP BY 1 ORDER BY 1`,
           [bins]
         );

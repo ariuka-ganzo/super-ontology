@@ -14,14 +14,23 @@ export interface Launched {
   errors: string[];
 }
 
-/** Launches the built app with its own settings folder. `firstRun: false` skips the sample project. */
-export async function launch(opts: { firstRun?: boolean } = {}): Promise<Launched> {
+/** Command-line arguments that start the app (the packaged executable needs none; the dev build needs the project folder). */
+export function appArgs(extra: string[] = []): string[] {
+  const args = process.env['FACET_E2E_EXECUTABLE'] ? [] : [ROOT];
+  if (process.platform === 'linux') args.push('--no-sandbox');
+  return [...args, ...extra];
+}
+
+/**
+ * Launches the built app with its own settings folder. `firstRun: false` skips the sample project.
+ * `files` are passed on the command line, as the OS does when a project file is double-clicked.
+ */
+export async function launch(opts: { firstRun?: boolean; files?: string[] } = {}): Promise<Launched> {
   const userData = mkdtempSync(join(tmpdir(), 'facet-e2e-'));
   if (opts.firstRun === false) writeFileSync(join(userData, 'settings.json'), JSON.stringify({ firstRunDone: true }));
   // FACET_E2E_EXECUTABLE runs the tests against a packaged build instead of the development build.
   const exe = process.env['FACET_E2E_EXECUTABLE'];
-  const args = exe ? [] : [ROOT];
-  if (process.platform === 'linux') args.push('--no-sandbox');
+  const args = appArgs(opts.files);
   if (process.env['FACET_SCREENSHOTS']) args.push('--force-device-scale-factor=2');
   const app = await electron.launch({ executablePath: exe || undefined, args, env: { ...process.env, FACET_USER_DATA: userData, NODE_ENV: 'production' } });
   const page = await app.firstWindow();

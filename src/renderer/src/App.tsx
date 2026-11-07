@@ -44,9 +44,13 @@ export function App(): React.JSX.Element {
   }, [name, dirty]);
 
   useEffect(() => {
+    // Listen before asking for startup info, so a file opened from the OS in between is not lost.
+    const off = window.facet.onOpenPath((path) => void openProject(path));
     void window.facet.startup().then((info) => {
-      if (info.firstRun) void openSample(true);
+      if (info.openPath) void openProject(info.openPath);
+      else if (info.firstRun) void openSample(true);
     });
+    return off;
   }, []);
 
   useEffect(() => {

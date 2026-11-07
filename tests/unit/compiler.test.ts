@@ -299,6 +299,64 @@ describe('filters and pipeline order', () => {
     ]);
   });
 
+  it('ranks Top N before other dimension filters, then intersects them (Tableau order)', async () => {
+    const c = dim('orders', 'cust');
+    const s = meas('orders', 'sales');
+    const top2 = { id: 'f', kind: 'topN' as const, field: col('orders', 'cust'), n: 2, by: { field: col('orders', 'sales'), agg: 'SUM' as const }, direction: 'top' as const };
+    const west = { id: 'w', kind: 'values' as const, field: col('orders', 'region'), values: ['West'] };
+    // Overall top 2 is c3 (450) and c1 (300). Only c3 has West orders (150).
+    const { rows } = await db.viz({ columns: [c], rows: [s], filters: [top2, west] });
+    expect(rows).toEqual([{ [c.id]: 'c3', [s.id]: 150 }]);
+    // As a context filter, West applies first: the top 2 within West are c3 (150) and c2 (50).
+    const ctx = await db.viz({ columns: [c], rows: [s], filters: [top2, { ...west, context: true }] });
+    expect(ctx.rows).toEqual([
+      { [c.id]: 'c2', [s.id]: 50 },
+      { [c.id]: 'c3', [s.id]: 150 }
+    ]);
+  });
+
+  it('applies dashboard slicers before Top N ranking', async () => {
+    const c = dim('orders', 'cust');
+    const s = meas('orders', 'sales');
+    const { rows } = await db.viz(
+      {
+        columns: [c],
+        rows: [s],
+        filters: [{ id: 'f', kind: 'topN', field: col('orders', 'cust'), n: 2, by: { field: col('orders', 'sales'), agg: 'SUM' }, direction: 'top' }]
+      },
+      { externalFilters: [{ id: 'x', kind: 'values', field: col('orders', 'region'), values: ['West'] }] }
+    );
+    expect(rows).toEqual([
+      { [c.id]: 'c2', [s.id]: 50 },
+      { [c.id]: 'c3', [s.id]: 150 }
+    ]);
+  });
+
+  it('explains that aggregate conditions need a number', () => {
+    const spec = {
+      chartType: 'auto' as const,
+      columns: [dim('orders', 'region')],
+      rows: [meas('orders', 'sales')],
+      tooltip: [],
+      filters: [{ id: 'm', kind: 'measure' as const, field: col('orders', 'order_date'), agg: 'MAX' as const, op: '>=' as const, value: 1 }]
+    };
+    expect(() => compileViz(spec, db.model)).toThrow(/compare numbers, but Max of order_date is a date/);
+  });
+
+  it('binds exactly the values the SQL uses when LOD expressions repeat', async () => {
+    addCalc('double_fixed', 'MAX({FIXED [region] : SUM([sales] * 2)}) + MAX({FIXED [region] : SUM([sales] * 2)})');
+    const r = dim('orders', 'region');
+    const m = calcItem('double_fixed');
+    for (const noLimit of [false, true]) {
+      const { rows, q } = await db.viz({ columns: [r], rows: [m] }, { noLimit });
+      const used = new Set([...q.sql.matchAll(/CAST\(\$(\d+) AS /g)].map((x) => Number(x[1])));
+      expect([...used].sort((a, b) => a - b)).toEqual(q.params.map((_, i) => i + 1));
+      // East: 2 x (100 + 200 + 300) = 1200, counted twice.
+      expect(byKey(rows, r.id)['East'][m.id]).toBe(2400);
+      expect(byKey(rows, r.id)['West'][m.id]).toBe(800);
+    }
+  });
+
   it('applies slicers on a related table and skips unrelated ones with a warning', async () => {
     const r = dim('orders', 'region');
     const s = meas('orders', 'sales');

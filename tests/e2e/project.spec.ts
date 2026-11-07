@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test';
+import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { importFixtures, launch, shot, stubDialogs, tableRows, tempDir, type Launched } from './helpers';
+import { appArgs, importFixtures, launch, shot, stubDialogs, tableRows, tempDir, type Launched } from './helpers';
 
 let l: Launched;
 test.afterEach(async () => {
@@ -51,6 +52,34 @@ test('saves a project, reopens it and gets the same view back', async () => {
       ['West', '4']
     ]);
   await shot(page, 'project-reopened');
+});
+
+test('opens a project file passed by the OS, at launch and while running', async () => {
+  // Make a project file to open.
+  l = await launch({ firstRun: false });
+  await importFixtures(l, ['sales.csv']);
+  const dir = tempDir();
+  const file = join(dir, 'double clicked.facet');
+  await stubDialogs(l.app, { save: file });
+  await l.page.getByRole('button', { name: 'Save as…' }).click();
+  await expect(l.page.getByTestId('toast-info').filter({ hasText: 'Saved' })).toBeVisible();
+  await l.app.close();
+
+  // First launch with the file: it opens instead of the sample project.
+  l = await launch({ files: [file] });
+  const name = l.page.getByRole('textbox', { name: 'Project name' });
+  await expect(name).toHaveValue('sales');
+  await expect(l.page.getByTestId('toast-error')).toHaveCount(0);
+
+  // While running, a second launch hands its file to this window and exits.
+  await l.page.getByRole('button', { name: 'New', exact: true }).click();
+  await expect(name).toHaveValue('Untitled');
+  const exe = await l.app.evaluate(() => process.execPath);
+  const userData = l.userData;
+  const second = spawn(exe, appArgs([file]), { env: { ...process.env, FACET_USER_DATA: userData, NODE_ENV: 'production' }, stdio: 'ignore' });
+  const exited = new Promise<number | null>((res) => second.once('exit', res));
+  await expect(name).toHaveValue('sales', { timeout: 20_000 });
+  expect(await Promise.race([exited, new Promise<string>((res) => setTimeout(() => res('still running'), 15_000))])).not.toBe('still running');
 });
 
 test('exports chart PNG, data CSV and dashboard PDF', async () => {

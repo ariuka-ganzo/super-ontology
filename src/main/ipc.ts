@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron';
-import { createWriteStream, promises as fs } from 'node:fs';
+import { promises as fs } from 'node:fs';
 import { basename, extname, isAbsolute, join } from 'node:path';
 import { z } from 'zod';
 import type { OpenProjectResult } from '@shared/api';
@@ -9,6 +9,7 @@ import { Engine, EngineError } from './engine/engine';
 import { excelSheets } from './engine/excel';
 import { loadProject, ProjectError, saveProject } from './project/project';
 import { samplesDir } from './paths';
+import { writeChunks } from './write';
 
 const EXT_FORMAT: Record<string, SourceFormat> = {
   '.csv': 'csv',
@@ -75,7 +76,7 @@ async function writeSettings(s: Settings): Promise<void> {
   await fs.rename(`${file}.tmp`, file);
 }
 
-export function registerIpc(engine: Engine, getWindow: () => BrowserWindow | null): void {
+export function registerIpc(engine: Engine, getWindow: () => BrowserWindow | null, takeOpenPath: () => string | null = () => null): void {
   const isTrusted = (e: IpcMainInvokeEvent): boolean => {
     const win = getWindow();
     return !!win && e.sender === win.webContents;
@@ -219,14 +220,20 @@ export function registerIpc(engine: Engine, getWindow: () => BrowserWindow | nul
       filters: [{ name: 'CSV', extensions: ['csv'] }]
     });
     if (r.canceled || !r.filePath) return null;
-    const out = createWriteStream(r.filePath, { encoding: 'utf8' });
-    try {
-      out.write('﻿');
-      for await (const chunk of engine.queryCsv(req)) if (!out.write(chunk)) await new Promise<void>((res) => out.once('drain', () => res()));
-    } finally {
-      await new Promise<void>((res) => out.end(() => res()));
+    const file = r.filePath;
+    async function* csv(): AsyncGenerator<string> {
+      yield '﻿';
+      yield* engine.queryCsv(req);
     }
-    return r.filePath;
+    try {
+      await writeChunks(file, csv());
+    } catch (e) {
+      const code = (e as NodeJS.ErrnoException).code;
+      if (code === 'EBUSY' || code === 'EPERM' || code === 'EACCES')
+        throw new Error(`Could not write ${basename(file)}. If it is open in another program, such as Excel, close it and try again.`);
+      throw e;
+    }
+    return file;
   });
 
   h('export:pdf', z.object({ name: z.string().max(200) }), async ({ name }) => {
@@ -243,7 +250,10 @@ export function registerIpc(engine: Engine, getWindow: () => BrowserWindow | nul
 
   h('app:startup', z.undefined(), async () => {
     const s = await readSettings();
-    return { firstRun: !s.firstRunDone, platform: process.platform, version: app.getVersion() };
+    const openPath = takeOpenPath();
+    // Opening a project file counts as the first run, so the sample does not replace it next time.
+    if (openPath && !s.firstRunDone) await writeSettings({ ...s, firstRunDone: true });
+    return { firstRun: !s.firstRunDone && !openPath, openPath, platform: process.platform, version: app.getVersion() };
   });
 
   h('app:title', z.object({ title: z.string().max(300), dirty: z.boolean() }), ({ title, dirty }) => {

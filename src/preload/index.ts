@@ -42,6 +42,13 @@ const api: FacetApi = {
     const listener = (_e: unknown, action: MenuAction): void => cb(action);
     ipcRenderer.on('menu', listener);
     return () => ipcRenderer.removeListener('menu', listener);
+  },
+  onOpenPath: (cb) => {
+    const listener = (_e: unknown, path: unknown): void => {
+      if (typeof path === 'string') cb(path);
+    };
+    ipcRenderer.on('open-path', listener);
+    return () => ipcRenderer.removeListener('open-path', listener);
   }
 };
 

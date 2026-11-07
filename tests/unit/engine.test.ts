@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import writeXlsxFile from 'write-excel-file/node';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Engine, csvCell } from '../../src/main/engine/engine';
+import { excelSheets } from '../../src/main/engine/excel';
 import type { QueryRequest } from '@shared/api';
 import type { Model, TableDef, TableSource } from '@shared/types';
 
@@ -82,6 +83,16 @@ describe('import', () => {
     expect(xl2.rowCount).toBe(1);
   });
 
+  it('lists Excel sheet names without reading sheet data', async () => {
+    await writeXlsxFile([
+      { sheet: 'Q1 & Q2', data: [['a'], [1]] },
+      { sheet: 'Plan', data: [['b'], [2]] }
+    ]).toFile(join(dir, 'names.xlsx'));
+    expect(await excelSheets(join(dir, 'names.xlsx'))).toEqual(['Q1 & Q2', 'Plan']);
+    writeFileSync(join(dir, 'fake.xlsx'), 'not a zip');
+    await expect(excelSheets(join(dir, 'fake.xlsx'))).rejects.toThrow();
+  });
+
   it('refuses files that are not data files', async () => {
     writeFileSync(join(dir, 'secret'), 'not,data\n1,2\n');
     await expect(engine.importTable('s', { path: join(dir, 'secret'), format: 'csv' })).rejects.toMatchObject({ code: 'invalid' });
@@ -116,6 +127,18 @@ describe('profile and cardinality', () => {
     const name = await engine.profile(t, 'name');
     expect(name.histogramKind).toBe('top');
     expect(name.nulls).toBe(1);
+  });
+
+  it('counts every row in the histogram of a column with one repeated value', async () => {
+    writeFileSync(join(dir, 'same.csv'), 'v,d\n5,2024-03-01\n5,2024-03-01\n5,2024-03-01\n,\n');
+    const r = await engine.importTable('same', { path: join(dir, 'same.csv'), format: 'csv' });
+    const t = tableDef('same', { path: '', format: 'csv' }, r);
+    for (const column of ['v', 'd']) {
+      const p = await engine.profile(t, column);
+      expect(p.histogramKind).toBe('bins');
+      expect(p.histogram).toHaveLength(1);
+      expect(p.histogram[0].count).toBe(3);
+    }
   });
 
   it('profiles with a type override', async () => {

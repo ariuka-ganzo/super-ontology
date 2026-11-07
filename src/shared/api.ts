@@ -44,6 +44,8 @@ export interface OpenProjectResult {
 
 export interface StartupInfo {
   firstRun: boolean;
+  /** A project file the app was launched with, for example by double-clicking it. */
+  openPath: string | null;
   platform: string;
   version: string;
 }
@@ -78,4 +80,6 @@ export interface FacetApi {
   startup(): Promise<StartupInfo>;
   setTitle(title: string, dirty: boolean): Promise<void>;
   onMenu(cb: (action: MenuAction) => void): () => void;
+  /** A project file was opened from the operating system while the app is running. */
+  onOpenPath(cb: (path: string) => void): () => void;
 }

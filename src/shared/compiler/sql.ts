@@ -48,6 +48,29 @@ export class Params {
   }
 }
 
+/**
+ * Drops bound values the SQL never references and renumbers the placeholders that remain.
+ * The compiler can add a value and then discard the SQL that used it (for example when an LOD
+ * expression turns out to be a duplicate). Quoted identifiers are skipped, so a column whose name
+ * looks like a placeholder is never rewritten.
+ */
+export function compactParams(sql: string, values: Scalar[]): { sql: string; params: Scalar[] } {
+  const params: Scalar[] = [];
+  const renumber = new Map<number, number>();
+  const out = sql.replace(/"(?:[^"]|"")*"|CAST\(\$(\d+) AS /g, (m, n?: string) => {
+    if (n === undefined) return m;
+    const old = Number(n);
+    let next = renumber.get(old);
+    if (next === undefined) {
+      params.push(values[old - 1]);
+      next = params.length;
+      renumber.set(old, next);
+    }
+    return `CAST($${next} AS `;
+  });
+  return { sql: out, params };
+}
+
 export function numberType(v: number): string {
   if (Number.isInteger(v)) return Math.abs(v) < 2 ** 31 ? 'INTEGER' : 'BIGINT';
   return 'DOUBLE';

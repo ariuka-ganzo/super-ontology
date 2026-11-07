@@ -16,7 +16,7 @@
 import { FormulaError } from '../formula/ast';
 import { AGGREGATES, TABLE_CALCS, fieldLabel, fieldNode, walk, type TNode, type VType } from '../formula/check';
 import type { AggFn, DataType, DateLevel, FieldRef, FilterDef, Model, OutputColumn, Relationship, Scalar, ShelfItem, TableDef, VizSpec } from '../types';
-import { Params, engineTableName, numberType, quoteIdent as q, sqlType } from './sql';
+import { Params, compactParams, engineTableName, numberType, quoteIdent as q, sqlType } from './sql';
 
 export class CompileError extends Error {
   constructor(
@@ -209,6 +209,8 @@ class Compiler {
         if (f.context) this.fail('Measure filters cannot be context filters');
         const node = this.node(() => measureNode(f.field, f.agg, model));
         if (node.level === 'tcalc') this.fail('Filters on table calculations are not supported in this version');
+        if (node.vtype !== 'number' && node.vtype !== 'null')
+          this.fail(`Aggregate conditions compare numbers, but ${itemLabel({ id: f.id, field: f.field, role: 'measure', agg: f.agg }, model)} is a ${node.vtype}`);
         measureWhere.push(`${this.aggSql(node)} ${f.op === '!=' ? '<>' : f.op} ${this.p.add(f.value, 'DOUBLE')}`);
       } else if (f.kind === 'topN') {
         topN.push(this.topN(f));
@@ -226,6 +228,9 @@ class Compiler {
     const reach = this.reachable(root);
     for (const t of viewTables)
       if (!reach.has(t)) throw new CompileError(`${this.tableName(t)} is not related to ${this.tableName(root)}. Add a relationship in the Model view`);
+    // Dashboard slicers and cross-filters cannot be marked as context filters, so they apply before
+    // Top N ranking. The worksheet's own dimension filters apply at the same step as Top N.
+    const extWhere: string[] = [];
     for (const f of this.opts.externalFilters ?? []) {
       if (f.kind === 'measure' || f.kind === 'topN') continue;
       const tables = this.filterTables(f);
@@ -237,11 +242,11 @@ class Compiler {
         );
         continue;
       }
-      dimWhere.push(this.predicate(f, 'row'));
+      extWhere.push(this.predicate(f, 'row'));
     }
 
     // INCLUDE/EXCLUDE grains reference dimension aliases, so they are resolved after all dims.
-    return this.assemble(root, outputs, ctxWhere, dimWhere, measureWhere, topN);
+    return this.assemble(root, outputs, ctxWhere, extWhere, dimWhere, measureWhere, topN);
   }
 
   // ---------------------------------------------------------------- tables and joins
@@ -626,6 +631,7 @@ class Compiler {
     root: string,
     outputs: { col: OutputColumn; sql: string }[],
     ctxWhere: string[],
+    extWhere: string[],
     dimWhere: string[],
     measureWhere: string[],
     topN: { dim: string; by: string; n: number; dir: 'top' | 'bottom' }[]
@@ -715,20 +721,26 @@ class Compiler {
       base = next;
     });
 
-    // 5. Dimension filters, slicers and cross-filters, then Top N filters.
+    // 5. Slicers and cross-filters, then the worksheet's dimension filters and Top N filters together.
+    // As in Tableau, Top N ranks only rows that passed context filters (and here dashboard filters),
+    // not the worksheet's other dimension filters; the two are then intersected.
     let rows = base;
-    if (dimWhere.length) {
-      ctes.push(`"filtered" AS (SELECT * FROM ${q(rows)} WHERE ${dimWhere.join(' AND ')})`);
+    if (extWhere.length) {
+      ctes.push(`"scoped" AS (SELECT * FROM ${q(rows)} WHERE ${extWhere.join(' AND ')})`);
+      rows = 'scoped';
+    }
+    const ranked = rows;
+    const rowWhere = [...dimWhere];
+    for (const t of topN) {
+      const dir = t.dir === 'top' ? 'DESC' : 'ASC';
+      rowWhere.push(
+        `${t.dim} IN (SELECT ${t.dim} FROM ${q(ranked)} GROUP BY 1 ORDER BY ${t.by} ${dir} NULLS LAST, 1 ASC LIMIT ${this.p.add(t.n, 'BIGINT')})`
+      );
+    }
+    if (rowWhere.length) {
+      ctes.push(`"filtered" AS (SELECT * FROM ${q(rows)} WHERE ${rowWhere.join(' AND ')})`);
       rows = 'filtered';
     }
-    topN.forEach((t, i) => {
-      const dir = t.dir === 'top' ? 'DESC' : 'ASC';
-      const name = `top${i}`;
-      ctes.push(
-        `${q(name)} AS (SELECT * FROM ${q(rows)} WHERE ${t.dim} IN (SELECT ${t.dim} FROM ${q(rows)} GROUP BY 1 ORDER BY ${t.by} ${dir} NULLS LAST, 1 ASC LIMIT ${this.p.add(t.n, 'BIGINT')}))`
-      );
-      rows = name;
-    });
 
     // 6. Aggregation at the view's level of detail.
     const dimCols = this.dims.map((d) => `${d.sql} AS ${q(d.alias)}`);
@@ -789,7 +801,8 @@ class Compiler {
     const maxRows = this.opts.maxRows ?? DEFAULT_MAX_ROWS;
     const limit = this.opts.noLimit ? '' : ` LIMIT ${this.p.add(maxRows + 1, 'BIGINT')}`;
     const sql = `WITH ${ctes.join(',\n')}\nSELECT ${select} FROM ${q(aggName)}${order.length ? ` ORDER BY ${[...new Set(order)].join(', ')}` : ''}${limit}`;
-    return { sql, params: this.p.values, columns: outputs.map((o) => o.col), warnings: this.warnings, maxRows };
+    const compact = compactParams(sql, this.p.values);
+    return { sql: compact.sql, params: compact.params, columns: outputs.map((o) => o.col), warnings: this.warnings, maxRows };
   }
 
   private joinWarning(parent: string, child: string, rel: Relationship): void {

@@ -3,6 +3,7 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Engine } from './engine/engine';
 import { registerIpc } from './ipc';
+import { PendingOpen, projectFromArgv } from './open-file';
 import { buildMenu } from './menu';
 import { samplesDir } from './paths';
 
@@ -83,25 +84,53 @@ async function smokeTest(): Promise<void> {
   }
 }
 
+/** Project files opened from the OS wait here until the renderer is ready for them. */
+const pendingOpen = new PendingOpen((path) => {
+  if (!mainWindow || mainWindow.webContents.isLoading()) return false;
+  mainWindow.webContents.send('open-path', path);
+  return true;
+});
+
+function showWindow(): void {
+  if (!engine) return; // Not ready yet: the window is created once the engine starts.
+  if (!mainWindow) {
+    pendingOpen.reset();
+    mainWindow = createWindow();
+    return;
+  }
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.focus();
+}
+
 if (process.argv.includes('--smoke-test')) {
   app.whenReady().then(smokeTest);
+} else if (!app.requestSingleInstanceLock()) {
+  // Another instance is running. It receives our arguments through 'second-instance'.
+  app.quit();
 } else {
-  if (!app.requestSingleInstanceLock()) app.quit();
-  app.on('second-instance', () => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.focus();
-    }
+  const fromArgs = projectFromArgv(process.argv, process.cwd());
+  if (fromArgs) pendingOpen.request(fromArgs);
+
+  app.on('second-instance', (_e, argv, workingDirectory) => {
+    const path = projectFromArgv(argv, workingDirectory);
+    if (path) pendingOpen.request(path);
+    showWindow();
+  });
+  // macOS delivers opened files as events, possibly before the app is ready.
+  app.on('open-file', (e, path) => {
+    e.preventDefault();
+    pendingOpen.request(path);
+    showWindow();
   });
 
   app.whenReady().then(async () => {
     lockDownSession();
     engine = await Engine.create();
-    registerIpc(engine, () => mainWindow);
+    registerIpc(engine, () => mainWindow, () => pendingOpen.take());
     buildMenu(() => mainWindow, !app.isPackaged);
     mainWindow = createWindow();
     app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow();
+      if (BrowserWindow.getAllWindows().length === 0) showWindow();
     });
   });
 
