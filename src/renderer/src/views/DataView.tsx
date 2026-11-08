@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { ColumnProfile, PreviewResult } from '@shared/api';
 import { formatValue } from '@shared/format';
-import type { DataType, TableDef } from '@shared/types';
-import { chooseAndImport, locateTable, openSample, reloadTable, removeTable } from '../actions';
+import { isServerFormat, type DataType, type TableDef } from '@shared/types';
+import { chooseAndImport, importDbItems, locateTable, openSample, reloadTable, removeTable } from '../actions';
+import { DatabaseDialog } from '../components/DatabaseDialog';
 import { StepsPanel } from '../components/StepsPanel';
 import { clearQueryCache } from '../query';
 import { useStore } from '../store';
@@ -23,6 +24,17 @@ export function DataView(): React.JSX.Element {
   const tableId = useStore((s) => s.tableId);
   const select = useStore((s) => s.selectTable);
   const table = tables.find((t) => t.id === tableId) ?? tables[0];
+  const [connecting, setConnecting] = useState(false);
+
+  const dialog = connecting && (
+    <DatabaseDialog
+      onClose={() => setConnecting(false)}
+      onImport={(items, password) => {
+        setConnecting(false);
+        void importDbItems(items, password);
+      }}
+    />
+  );
 
   if (!table)
     return (
@@ -33,16 +45,23 @@ export function DataView(): React.JSX.Element {
             <path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" />
           </svg>
           <h2>Bring in some data</h2>
-          <p className="muted">Import CSV, TSV, Parquet, JSON or Excel files. You can also drag files onto this window. Everything stays on your computer.</p>
+          <p className="muted">
+            Import CSV, TSV, Parquet, JSON, Excel or SQLite files, or copy tables in from a PostgreSQL or MySQL database. You can also drag files onto this
+            window.
+          </p>
           <div className="actions">
             <button className="primary" onClick={() => void chooseAndImport()}>
               Import data…
             </button>
+            <button onClick={() => setConnecting(true)}>Connect to a database…</button>
             <button onClick={() => void openSample()}>Open the sample project</button>
           </div>
         </div>
+        {dialog}
       </div>
     );
+  const server = isServerFormat(table.source.format);
+  const what = table.source.query !== undefined ? ' · query' : table.source.table ? ` · ${table.source.table.name}` : '';
 
   return (
     <div className="view">
@@ -59,9 +78,12 @@ export function DataView(): React.JSX.Element {
         <span className="faint grow" title={table.source.path} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {table.source.path}
           {table.source.sheet ? ` · sheet ${table.source.sheet}` : ''}
+          {what}
         </span>
-        <button onClick={() => void reloadTable(table.id)}>Reload</button>
-        <button onClick={() => void locateTable(table.id)}>Locate file…</button>
+        <button onClick={() => void reloadTable(table.id)} title={server ? 'Copy the latest data from the database' : 'Read the file again'}>
+          Reload
+        </button>
+        {!server && <button onClick={() => void locateTable(table.id)}>Locate file…</button>}
         <button
           className="danger"
           onClick={() => {
@@ -70,11 +92,13 @@ export function DataView(): React.JSX.Element {
         >
           Remove
         </button>
+        <button onClick={() => setConnecting(true)}>Database…</button>
         <button className="primary" onClick={() => void chooseAndImport()}>
           Import data…
         </button>
       </div>
       <TableData key={table.id} table={table} />
+      {dialog}
     </div>
   );
 }
@@ -137,9 +161,11 @@ function TableData({ table }: { table: TableDef }): React.JSX.Element {
           {error}
         </div>
         <div className="row">
-          <button className="primary" onClick={() => void locateTable(table.id)}>
-            Locate file…
-          </button>
+          {!isServerFormat(table.source.format) && (
+            <button className="primary" onClick={() => void locateTable(table.id)}>
+              Locate file…
+            </button>
+          )}
           <button onClick={() => void reloadTable(table.id)}>Try again</button>
         </div>
       </div>

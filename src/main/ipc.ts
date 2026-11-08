@@ -5,7 +5,8 @@ import { z } from 'zod';
 import type { OpenProjectResult } from '@shared/api';
 import { appendSources } from '@shared/prep/prep';
 import { modelSchema, prepStepSchema, projectSchema, queryRequestSchema, relationshipSchema, sourceSchema, tableSchema } from '@shared/schema';
-import type { Project, SourceFormat, TableDef, TableSource } from '@shared/types';
+import { isServerFormat, type Project, type SourceFormat, type TableDef, type TableSource } from '@shared/types';
+import { canSavePasswords, forgetPassword, loadPassword, savePassword } from './credentials';
 import { Engine, EngineError } from './engine/engine';
 import { excelSheets } from './engine/excel';
 import { loadProject, ProjectError, saveProject } from './project/project';
@@ -22,7 +23,11 @@ const EXT_FORMAT: Record<string, SourceFormat> = {
   '.json': 'json',
   '.jsonl': 'json',
   '.ndjson': 'json',
-  '.xlsx': 'excel'
+  '.xlsx': 'excel',
+  '.db': 'sqlite',
+  '.sqlite': 'sqlite',
+  '.sqlite3': 'sqlite',
+  '.db3': 'sqlite'
 };
 
 type Handler<S extends z.ZodType> = (args: z.infer<S>, event: IpcMainInvokeEvent) => Promise<unknown> | unknown;
@@ -77,6 +82,27 @@ async function writeSettings(s: Settings): Promise<void> {
   await fs.rename(`${file}.tmp`, file);
 }
 
+/**
+ * Runs `fn` with the password for a server source: the one just typed, otherwise the saved one
+ * (undefined for files, or when there is none; the engine then asks for it). A typed password is
+ * saved, or the saved one forgotten, only once the server has accepted it.
+ */
+async function withPassword<T>(
+  source: TableSource,
+  typed: string | undefined,
+  remember: boolean | undefined,
+  fn: (password?: string) => Promise<T>
+): Promise<T> {
+  const id = isServerFormat(source.format) ? source.connection?.id : undefined;
+  if (!id) return fn(undefined);
+  const result = await fn(typed ?? (await loadPassword(id)));
+  if (typed !== undefined) {
+    if (remember) await savePassword(id, typed);
+    else await forgetPassword(id);
+  }
+  return result;
+}
+
 export function registerIpc(engine: Engine, getWindow: () => BrowserWindow | null, takeOpenPath: () => string | null = () => null): void {
   const isTrusted = (e: IpcMainInvokeEvent): boolean => {
     const win = getWindow();
@@ -94,7 +120,7 @@ export function registerIpc(engine: Engine, getWindow: () => BrowserWindow | nul
       title: 'Import data',
       properties: ['openFile', 'multiSelections'],
       filters: [
-        { name: 'Data files', extensions: ['csv', 'tsv', 'txt', 'tab', 'parquet', 'pq', 'json', 'jsonl', 'ndjson', 'xlsx'] },
+        { name: 'Data files', extensions: ['csv', 'tsv', 'txt', 'tab', 'parquet', 'pq', 'json', 'jsonl', 'ndjson', 'xlsx', 'db', 'sqlite', 'sqlite3', 'db3'] },
         { name: 'All files', extensions: ['*'] }
       ]
     });
@@ -103,7 +129,8 @@ export function registerIpc(engine: Engine, getWindow: () => BrowserWindow | nul
 
   h('data:source', absPath, async (path) => {
     const format = formatForPath(path);
-    if (!format) throw new EngineError(`${basename(path)} is not a supported file type. Use CSV, TSV, Parquet, JSON or Excel (.xlsx).`, 'invalid');
+    if (!format)
+      throw new EngineError(`${basename(path)} is not a supported file type. Use CSV, TSV, Parquet, JSON, Excel (.xlsx) or a SQLite database.`, 'invalid');
     const source: TableSource & { sheets?: string[] } = { path, format };
     if (format === 'excel') {
       try {
@@ -118,9 +145,20 @@ export function registerIpc(engine: Engine, getWindow: () => BrowserWindow | nul
 
   const tableId = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
   const steps = z.array(prepStepSchema).max(500);
-  h('data:import', z.object({ tableId, source: sourceSchema.extend({ path: absPath }), steps: steps.optional() }), ({ tableId, source, steps }) =>
-    engine.importTable(tableId, source, steps)
+  // Files need an absolute path; servers need their connection settings.
+  const source = sourceSchema.superRefine((s, ctx) => {
+    if (isServerFormat(s.format)) {
+      if (!s.connection) ctx.addIssue({ code: 'custom', path: ['connection'], message: 'is missing' });
+    } else if (!isAbsolute(s.path)) ctx.addIssue({ code: 'custom', path: ['path'], message: 'must be an absolute path' });
+  });
+  const password = { password: z.string().max(1000).optional(), remember: z.boolean().optional() };
+  h('data:import', z.object({ tableId, source, steps: steps.optional(), ...password }), ({ tableId, source, steps, password, remember }) =>
+    withPassword(source, password, remember, (pw) => engine.importTable(tableId, source, steps, pw))
   );
+  h('db:tables', z.object({ source, ...password }), ({ source, password, remember }) =>
+    withPassword(source, password, remember, (pw) => engine.listDbTables(source, pw))
+  );
+  h('db:canSavePasswords', z.undefined(), () => canSavePasswords());
   h('data:steps', z.object({ tableId, steps }), ({ tableId, steps }) => engine.applySteps(tableId, steps));
   h('data:drop', tableId, (id) => engine.dropTable(id));
   h(
@@ -146,7 +184,7 @@ export function registerIpc(engine: Engine, getWindow: () => BrowserWindow | nul
     const ordered = [...project.model.tables.filter((t) => !appends(t)), ...project.model.tables.filter(appends)];
     for (const t of ordered) {
       try {
-        const r = await engine.importTable(t.id, t.source, t.steps);
+        const r = await withPassword(t.source, undefined, undefined, (pw) => engine.importTable(t.id, t.source, t.steps, pw));
         if (r.stepError) {
           const i = (t.steps ?? []).findIndex((s) => s.id === r.stepError?.stepId);
           stepErrors.push({ tableId: t.id, stepId: r.stepError.stepId, message: `${t.name}, step ${i + 1}: ${r.stepError.message}` });

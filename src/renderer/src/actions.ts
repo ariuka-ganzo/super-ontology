@@ -1,5 +1,6 @@
-import type { OpenProjectResult } from '@shared/api';
+import type { DbTable, OpenProjectResult, PasswordInput } from '@shared/api';
 import type { Project, TableDef, TableSource } from '@shared/types';
+import { askPassword, type DbImport } from './components/DatabaseDialog';
 import { pickSheets } from './components/SheetPicker';
 import { newId } from './ids';
 import { mergeColumns, queueDependents } from './prepSync';
@@ -28,9 +29,9 @@ function fileName(path: string): string {
 }
 
 /** Imports one source as a new table. */
-async function importSource(src: TableSource, name: string): Promise<void> {
+async function importSource(src: TableSource, name: string, password?: PasswordInput): Promise<void> {
   const id = newId('t');
-  const r = await window.ontology.importTable(id, src);
+  const r = await window.ontology.importTable(id, src, undefined, password);
   const table: TableDef = {
     id,
     name: uniqueName(
@@ -55,6 +56,10 @@ export async function importPaths(paths: string[]): Promise<void> {
   for (const path of paths) {
     try {
       const { sheets, ...src } = await window.ontology.sourceFromPath(path);
+      if (src.format === 'sqlite') {
+        await importSqlite(src);
+        continue;
+      }
       if (src.format === 'excel' && sheets && sheets.length > 1) {
         const chosen = await pickSheets(fileName(path), sheets, true);
         for (const sheet of chosen) {
@@ -79,12 +84,58 @@ export async function importPaths(paths: string[]): Promise<void> {
   }
 }
 
+const dbTableLabel = (t: DbTable): string => (t.schema && t.schema !== 'main' ? `${t.schema}.${t.name}` : t.name);
+
+/** Asks which tables of a SQLite file to import, and imports each as its own table. */
+async function importSqlite(src: TableSource): Promise<void> {
+  s().setBusy(`Reading ${fileName(src.path)}…`);
+  let found: DbTable[];
+  try {
+    found = await window.ontology.listDbTables(src);
+  } finally {
+    s().setBusy(null);
+  }
+  if (!found.length) {
+    s().toast('warning', `${fileName(src.path)} has no tables.`);
+    return;
+  }
+  const labels = found.map(dbTableLabel);
+  const chosen = found.length === 1 ? labels : await pickSheets(fileName(src.path), labels, true, 'table');
+  await importDbItems(
+    found.filter((t) => chosen.includes(dbTableLabel(t))).map((t) => ({ source: { ...src, table: { schema: t.schema, name: t.name } }, name: t.name }))
+  );
+}
+
+/** Imports tables from a database (or the result of a query) as new tables. */
+export async function importDbItems(items: DbImport[], password?: PasswordInput): Promise<void> {
+  for (const item of items) {
+    s().setBusy(`Importing ${item.name}…`);
+    try {
+      await importSource(item.source, item.name, password);
+    } catch (e) {
+      s().toast('error', `${item.name}: ${errText(e)}`);
+    } finally {
+      s().setBusy(null);
+    }
+  }
+}
+
 /**
  * The source to use when a table is pointed at a different file. For a workbook, keeps the table's
  * sheet when the new file has a sheet with that name, and otherwise asks. Null when cancelled.
  */
 async function sourceForLocatedFile(table: TableDef, path: string): Promise<TableSource | null> {
   const { sheets, ...src } = await window.ontology.sourceFromPath(path);
+  if (src.format === 'sqlite') {
+    // A moved SQLite file: keep the same table when it is there, otherwise ask.
+    const found = await window.ontology.listDbTables(src);
+    const want = table.source.table;
+    const same = want && found.find((t) => t.name === want.name && (want.schema === undefined || t.schema === want.schema));
+    if (same) return { ...src, table: { schema: same.schema, name: same.name } };
+    const [label] = await pickSheets(fileName(path), found.map(dbTableLabel), false, 'table');
+    const pick = found.find((t) => dbTableLabel(t) === label);
+    return pick ? { ...src, table: { schema: pick.schema, name: pick.name } } : null;
+  }
   if (src.format !== 'excel' || !sheets || sheets.length < 2) return src;
   if (table.source.sheet && sheets.includes(table.source.sheet)) return { ...src, sheet: table.source.sheet };
   const [sheet] = await pickSheets(fileName(path), sheets, false);
@@ -100,10 +151,14 @@ export async function chooseAndImport(): Promise<void> {
   }
 }
 
-/** Reloads a table from its source file and explains any column changes. */
-export async function reloadTable(tableId: string, newPath?: string): Promise<void> {
+/**
+ * Reloads a table from its source file or database and explains any column changes. For a server
+ * whose password is not saved (or no longer works), asks for it and tries again.
+ */
+export async function reloadTable(tableId: string, newPath?: string, password?: PasswordInput): Promise<void> {
   const table = s().project.model.tables.find((t) => t.id === tableId);
   if (!table) return;
+  let askFor: string | null = null;
   try {
     let source = table.source;
     if (newPath) {
@@ -112,7 +167,7 @@ export async function reloadTable(tableId: string, newPath?: string): Promise<vo
       source = located;
     }
     s().setBusy(`Reloading ${table.name}…`);
-    const r = await window.ontology.importTable(tableId, source, table.steps);
+    const r = await window.ontology.importTable(tableId, source, table.steps, password);
     const before = new Set(table.columns.map((c) => c.name));
     const after = new Set(r.columns.map((c) => c.name));
     const added = [...after].filter((c) => !before.has(c));
@@ -138,9 +193,15 @@ export async function reloadTable(tableId: string, newPath?: string): Promise<vo
   } catch (e) {
     const err = e as Error & { code?: string };
     s().setTableError(tableId, err.message);
-    s().toast('error', err.code === 'missing' ? `${err.message} Use "Locate file" to point to its new location.` : err.message);
+    if (err.code === 'password') askFor = err.message;
+    else s().toast('error', err.code === 'missing' ? `${err.message} Use "Locate file" to point to its new location.` : err.message);
   } finally {
     s().setBusy(null);
+  }
+  if (askFor !== null) {
+    const k = table.source.connection;
+    const typed = await askPassword(`Password for ${table.name}`, k ? `${askFor} (${k.database} on ${k.host})` : askFor);
+    if (typed) await reloadTable(tableId, newPath, typed);
   }
 }
 

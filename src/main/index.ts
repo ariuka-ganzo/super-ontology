@@ -5,7 +5,7 @@ import { Engine } from './engine/engine';
 import { registerIpc } from './ipc';
 import { PendingOpen, projectFromArgv } from './open-file';
 import { buildMenu } from './menu';
-import { samplesDir } from './paths';
+import { extensionsDir, samplesDir } from './paths';
 
 // Tests and smoke checks can isolate settings in their own folder.
 if (process.env['ONTOLOGY_USER_DATA']) app.setPath('userData', process.env['ONTOLOGY_USER_DATA']);
@@ -49,7 +49,8 @@ function lockDownSession(): void {
   const ses = session.defaultSession;
   ses.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));
   ses.setPermissionCheckHandler(() => false);
-  // No network access: only the app's own files load (and the dev server during development).
+  // The window has no network access: only the app's own files load (and the dev server during development).
+  // Database connections are made by DuckDB in the main process, not by the window.
   ses.webRequest.onBeforeRequest((details, cb) => {
     const url = details.url;
     const ok =
@@ -72,11 +73,15 @@ function report(line: string): void {
 /** `--smoke-test`: load DuckDB, import the bundled sample, run a query, print the result and exit. */
 async function smokeTest(): Promise<void> {
   try {
-    const e = await Engine.create();
+    const e = await Engine.create({ extensionsDir: extensionsDir() });
     const r = await e.importTable('smoke', { path: join(samplesDir(), 'orders.csv'), format: 'csv' });
     const rows = await e.unsafeRawForTests('SELECT COUNT(*), version() FROM t_smoke');
+    // Loading the database connectors checks that they were packaged and that their signatures are valid.
+    const connectors = await e.connector.selfTest();
     e.close();
-    report(`ONTOLOGY_SMOKE_OK rows=${r.rowCount} count=${rows[0][0]} duckdb=${rows[0][1]} packaged=${app.isPackaged} resources=${process.resourcesPath}\n`);
+    report(
+      `ONTOLOGY_SMOKE_OK rows=${r.rowCount} count=${rows[0][0]} duckdb=${rows[0][1]} connectors=${connectors} packaged=${app.isPackaged} resources=${process.resourcesPath}\n`
+    );
     app.exit(0);
   } catch (err) {
     report(`ONTOLOGY_SMOKE_FAIL ${(err as Error).stack ?? err}\n`);
@@ -125,8 +130,12 @@ if (process.argv.includes('--smoke-test')) {
 
   app.whenReady().then(async () => {
     lockDownSession();
-    engine = await Engine.create();
-    registerIpc(engine, () => mainWindow, () => pendingOpen.take());
+    engine = await Engine.create({ extensionsDir: extensionsDir() });
+    registerIpc(
+      engine,
+      () => mainWindow,
+      () => pendingOpen.take()
+    );
     buildMenu(() => mainWindow, !app.isPackaged);
     mainWindow = createWindow();
     app.on('activate', () => {

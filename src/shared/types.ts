@@ -5,14 +5,40 @@ export type DataType = 'string' | 'integer' | 'number' | 'boolean' | 'date' | 'd
 
 export type Scalar = string | number | boolean | null;
 
-export type SourceFormat = 'csv' | 'tsv' | 'parquet' | 'json' | 'excel';
+export type FileFormat = 'csv' | 'tsv' | 'parquet' | 'json' | 'excel' | 'sqlite';
+/** Database servers: data is copied in on import and on Reload. */
+export type ServerFormat = 'postgres' | 'mysql';
+export type SourceFormat = FileFormat | ServerFormat;
+
+export function isServerFormat(f: SourceFormat): f is ServerFormat {
+  return f === 'postgres' || f === 'mysql';
+}
+
+/** Where a database server is. The password is never stored here; see main/credentials.ts. */
+export interface ServerConnection {
+  /** Stable id that saved passwords are filed under. */
+  id: string;
+  host: string;
+  port: number;
+  database: string;
+  user: string;
+}
 
 export interface TableSource {
-  /** Absolute path at runtime. Stored relative to the project file where possible. */
+  /**
+   * Files (including SQLite): absolute path at runtime, stored relative to the project file where possible.
+   * Servers: a description such as postgres://user@host:5432/db, for display only.
+   */
   path: string;
   format: SourceFormat;
   /** Excel only: sheet name. The first sheet is used when missing. */
   sheet?: string;
+  /** Databases: the table to import, unless `query` is set. */
+  table?: { schema?: string; name: string };
+  /** PostgreSQL and MySQL: a SELECT query run on the server instead of reading a table. */
+  query?: string;
+  /** PostgreSQL and MySQL. */
+  connection?: ServerConnection;
 }
 
 export interface ColumnDef {

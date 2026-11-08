@@ -1,6 +1,16 @@
 // The typed API the preload script exposes to the renderer as `window.ontology`.
 import type { ColumnDef, FilterDef, Model, PrepStep, Project, QueryResult, Relationship, Scalar, TableDef, TableSource, VizSpec } from './types';
 
+export interface PasswordInput {
+  password: string;
+  remember: boolean;
+}
+
+export interface DbTable {
+  schema?: string;
+  name: string;
+}
+
 /** A table after its cleaning steps were applied. */
 export interface PrepareResult {
   columns: ColumnDef[];
@@ -72,7 +82,15 @@ export interface OntologyApi {
   chooseDataFiles(): Promise<string[]>;
   pathForFile(file: File): string;
   sourceFromPath(path: string): Promise<TableSource & { sheets?: string[] }>;
-  importTable(tableId: string, source: TableSource, steps?: PrepStep[]): Promise<ImportResult>;
+  /**
+   * Imports a file or database table. For a server, `password` is used instead of the saved one,
+   * and saved first when `remember` is true (or the saved one is forgotten when it is false).
+   */
+  importTable(tableId: string, source: TableSource, steps?: PrepStep[], password?: PasswordInput): Promise<ImportResult>;
+  /** Tables in a SQLite file or on a server. */
+  listDbTables(source: TableSource, password?: PasswordInput): Promise<DbTable[]>;
+  /** False when the operating system offers no secure storage (Linux without a keyring). */
+  canSavePasswords(): Promise<boolean>;
   /** Re-applies a table's cleaning steps to its already imported data. */
   applySteps(tableId: string, steps: PrepStep[]): Promise<PrepareResult>;
   dropTable(tableId: string): Promise<void>;

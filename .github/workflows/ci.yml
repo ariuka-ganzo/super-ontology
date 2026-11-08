@@ -28,9 +28,45 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      # DuckDB's database connectors, which ship inside the app. Tests fail rather than skip without them.
+      - run: node scripts/fetch-duckdb-extensions.mjs
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+        env:
+          REQUIRE_DB_CONNECTORS: '1'
+
+  databases:
+    # Imports from real PostgreSQL and MySQL servers. Service containers only run on Linux runners.
+    name: Database servers (PostgreSQL, MySQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: shop
+        ports: ['3306:3306']
+        options: --health-cmd "mysqladmin ping -h 127.0.0.1 -proot" --health-interval 5s --health-timeout 5s --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: node scripts/fetch-duckdb-extensions.mjs
+      - run: npx vitest run tests/unit/databases.test.ts
+        env:
+          REQUIRE_DB_CONNECTORS: '1'
+          ONTOLOGY_TEST_POSTGRES: '1'
+          ONTOLOGY_TEST_MYSQL: '1'
 
   e2e:
     name: End-to-end tests (Linux, xvfb)
@@ -42,6 +78,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: node scripts/fetch-duckdb-extensions.mjs
       - run: npm run build
       - run: xvfb-run -a npx playwright test
       - uses: actions/upload-artifact@v4
@@ -63,10 +100,13 @@ jobs:
         include:
           - os: windows-latest
             target: --win
+            extensions: win-x64
           - os: macos-latest
             target: --mac
+            extensions: mac-arm64 mac-x64
           - os: ubuntu-latest
             target: --linux
+            extensions: linux-x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -78,6 +118,7 @@ jobs:
       - name: Add DuckDB's Intel binding for the Intel Mac build
         if: runner.os == 'macOS'
         run: node scripts/add-duckdb-binding.mjs darwin-x64
+      - run: node scripts/fetch-duckdb-extensions.mjs ${{ matrix.extensions }}
       - run: npm run build
       # Builds the installer (NSIS, dmg or AppImage) as well as the unpacked app it is made from,
       # so installer configuration is checked on every pull request, not only at release time.

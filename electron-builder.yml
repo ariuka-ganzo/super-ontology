@@ -19,6 +19,10 @@ extraResources:
     to: THIRD_PARTY_NOTICES.md
   - from: LICENSE
     to: LICENSE.txt
+  # DuckDB's database connectors for this platform and architecture, fetched before packaging by
+  # scripts/fetch-duckdb-extensions.mjs. DuckDB checks their signatures when it loads them.
+  - from: build/duckdb-extensions/${os}-${arch}
+    to: duckdb-extensions
   - from: samples
     to: samples
     filter:

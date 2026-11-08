@@ -3,6 +3,7 @@ import type { MenuAction } from '@shared/api';
 import { chooseAndImport, importPaths, newProjectAction, openProject, openSample, saveProject } from './actions';
 import { MenuItem, Popover } from './components/Popover';
 import { Modal } from './components/Modal';
+import { PasswordPrompt } from './components/DatabaseDialog';
 import { SheetPicker } from './components/SheetPicker';
 import { newId } from './ids';
 import { startPrepSync } from './prepSync';
@@ -142,6 +143,7 @@ export function App(): React.JSX.Element {
         ))}
       </div>
       <SheetPicker />
+      <PasswordPrompt />
       {about && (
         <Modal title="About Super Ontology" onClose={() => setAbout(false)}>
           <div className="col">
@@ -150,7 +152,9 @@ export function App(): React.JSX.Element {
               <b>Super Ontology 0.1</b>
             </div>
             <p>A free, open-source desktop app for exploring local data and building interactive dashboards. MIT licence.</p>
-            <p className="muted">Your data stays on your computer. Super Ontology makes no network requests and collects no telemetry.</p>
+            <p className="muted">
+              Your data stays on your computer. Super Ontology collects no telemetry, and only connects to database servers you add yourself.
+            </p>
             <p className="muted">Built with Electron, React, DuckDB and Apache ECharts.</p>
           </div>
         </Modal>

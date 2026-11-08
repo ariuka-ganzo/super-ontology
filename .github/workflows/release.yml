@@ -18,10 +18,13 @@ jobs:
         include:
           - os: windows-latest
             target: --win
+            extensions: win-x64
           - os: macos-latest
             target: --mac
+            extensions: mac-arm64 mac-x64
           - os: ubuntu-latest
             target: --linux
+            extensions: linux-x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -33,9 +36,13 @@ jobs:
       - name: Add DuckDB's Intel binding for the Intel Mac build
         if: runner.os == 'macOS'
         run: node scripts/add-duckdb-binding.mjs darwin-x64
+      # DuckDB's database connectors, which ship inside the installers.
+      - run: node scripts/fetch-duckdb-extensions.mjs ${{ matrix.extensions }}
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+        env:
+          REQUIRE_DB_CONNECTORS: '1'
       - run: npm run build
       # Installers are unsigned in v0.1 (see README).
       - run: npx electron-builder ${{ matrix.target }} --publish never

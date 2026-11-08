@@ -1,6 +1,6 @@
 # Third-party notices
 
-Super Ontology is MIT licensed. Its installers include the open-source components below. Each keeps its own licence, and each licence permits redistribution in an MIT-licensed application. Full licence texts are in each package's folder under `node_modules` in the source tree.
+Super Ontology is MIT licensed. Its installers include the open-source components below. Each keeps its own licence, and each licence permits redistribution in an MIT-licensed application. Full licence texts are in each package's folder under `node_modules` in the source tree. The DuckDB database extensions are separate files loaded at run time, built and published by the DuckDB project; their licences and those of the libraries inside them are listed in the DuckDB extension repositories (duckdb/duckdb-sqlite, duckdb/duckdb-postgres, duckdb/duckdb-mysql on GitHub).
 
 | Component | Version | Licence | Used for |
 |---|---|---|---|
@@ -19,6 +19,11 @@ Super Ontology is MIT licensed. Its installers include the open-source component
 | react-grid-layout, react-draggable, react-resizable | 1.5.2 | MIT | Dashboard layout |
 | clsx, fast-equals, prop-types, resize-observer-polyfill | see lock file | MIT | Dependencies of react-grid-layout |
 | zustand | 5.0.8 | MIT | Application state |
+| DuckDB extensions `sqlite_scanner`, `postgres_scanner`, `mysql_scanner` | 1.5.6 | MIT | Database connections. Official, signed builds from extensions.duckdb.org, shipped in `resources/duckdb-extensions` |
+| SQLite (inside `sqlite_scanner`) | | Public domain | Reading SQLite files |
+| libpq (inside `postgres_scanner`) | | PostgreSQL License | Connecting to PostgreSQL |
+| MariaDB Connector/C (inside `mysql_scanner`) | | LGPL-2.1-or-later | Connecting to MySQL. Its source is available from mariadb.com and github.com/mariadb-corporation/mariadb-connector-c |
+| OpenSSL (inside `postgres_scanner` and `mysql_scanner`) | | Apache-2.0 | Encrypted database connections |
 
 ## Apache ECharts NOTICE
 
