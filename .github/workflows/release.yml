@@ -63,5 +63,5 @@ jobs:
           gh release create "$GITHUB_REF_NAME" dist/* \
             --repo "$GITHUB_REPOSITORY" \
             --draft \
-            --title "Facet BI $GITHUB_REF_NAME" \
+            --title "Super Ontology $GITHUB_REF_NAME" \
             --notes "Unsigned installers for Windows (NSIS), macOS (dmg, Apple silicon) and Linux (AppImage). See the README for the Windows SmartScreen and macOS Gatekeeper warnings."

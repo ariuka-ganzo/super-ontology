@@ -8,7 +8,7 @@ import { buildMenu } from './menu';
 import { samplesDir } from './paths';
 
 // Tests and smoke checks can isolate settings in their own folder.
-if (process.env['FACET_USER_DATA']) app.setPath('userData', process.env['FACET_USER_DATA']);
+if (process.env['ONTOLOGY_USER_DATA']) app.setPath('userData', process.env['ONTOLOGY_USER_DATA']);
 
 const devUrl = !app.isPackaged ? process.env['ELECTRON_RENDERER_URL'] : undefined;
 let mainWindow: BrowserWindow | null = null;
@@ -21,7 +21,7 @@ function createWindow(): BrowserWindow {
     minWidth: 1000,
     minHeight: 640,
     show: false,
-    title: 'Facet BI',
+    title: 'Super Ontology',
     backgroundColor: '#f6f7f9',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -30,7 +30,7 @@ function createWindow(): BrowserWindow {
       nodeIntegration: false,
       webSecurity: true,
       spellcheck: false,
-      devTools: !app.isPackaged || process.env['FACET_DEVTOOLS'] === '1'
+      devTools: !app.isPackaged || process.env['ONTOLOGY_DEVTOOLS'] === '1'
     }
   });
   win.once('ready-to-show', () => win.show());
@@ -65,7 +65,7 @@ function lockDownSession(): void {
 /** GUI apps on Windows have no console, so the smoke result can also go to a file. */
 function report(line: string): void {
   process.stdout.write(line);
-  const out = process.env['FACET_SMOKE_OUT'];
+  const out = process.env['ONTOLOGY_SMOKE_OUT'];
   if (out) writeFileSync(out, line);
 }
 
@@ -76,10 +76,10 @@ async function smokeTest(): Promise<void> {
     const r = await e.importTable('smoke', { path: join(samplesDir(), 'orders.csv'), format: 'csv' });
     const rows = await e.unsafeRawForTests('SELECT COUNT(*), version() FROM t_smoke');
     e.close();
-    report(`FACET_SMOKE_OK rows=${r.rowCount} count=${rows[0][0]} duckdb=${rows[0][1]} packaged=${app.isPackaged} resources=${process.resourcesPath}\n`);
+    report(`ONTOLOGY_SMOKE_OK rows=${r.rowCount} count=${rows[0][0]} duckdb=${rows[0][1]} packaged=${app.isPackaged} resources=${process.resourcesPath}\n`);
     app.exit(0);
   } catch (err) {
-    report(`FACET_SMOKE_FAIL ${(err as Error).stack ?? err}\n`);
+    report(`ONTOLOGY_SMOKE_FAIL ${(err as Error).stack ?? err}\n`);
     app.exit(1);
   }
 }

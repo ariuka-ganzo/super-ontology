@@ -10,7 +10,7 @@ let project: Project;
 
 beforeAll(async () => {
   engine = await Engine.create();
-  project = await loadProject(join(__dirname, '..', '..', 'samples', 'sample.facet'));
+  project = await loadProject(join(__dirname, '..', '..', 'samples', 'sample.ontology'));
   for (const t of project.model.tables) {
     const r = await engine.importTable(t.id, t.source);
     // The column definitions written by the generator match what the engine imports.

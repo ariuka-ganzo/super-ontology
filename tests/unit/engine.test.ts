@@ -18,7 +18,7 @@ function tableDef(id: string, source: TableSource, r: { columns: TableDef['colum
 
 beforeAll(async () => {
   engine = await Engine.create();
-  dir = mkdtempSync(join(tmpdir(), 'facet-engine-'));
+  dir = mkdtempSync(join(tmpdir(), 'ontology-engine-'));
   writeFileSync(join(dir, 'a.csv'), 'id,name,amount,day,flag\n1,Ann,10.5,2024-01-01,true\n2,"Bob, Jr.",20,2024-01-02,false\n3,,30,,true\n');
   writeFileSync(join(dir, 'b.tsv'), 'id\tcity\n1\tOslo\n2\tLima\n');
   writeFileSync(

@@ -1,6 +1,6 @@
-appId: org.facetbi.desktop
-productName: Facet BI
-copyright: Copyright © 2026 Facet BI contributors
+appId: org.superontology.desktop
+productName: Super Ontology
+copyright: Copyright © 2026 Super Ontology contributors
 directories:
   output: release
   buildResources: build
@@ -23,12 +23,12 @@ extraResources:
     to: samples
     filter:
       - '*.csv'
-      - '*.facet'
+      - '*.ontology'
 fileAssociations:
-  - ext: facet
-    name: Facet BI project
+  - ext: ontology
+    name: Super Ontology project
     role: Editor
-artifactName: Facet-BI-${version}-${os}-${arch}.${ext}
+artifactName: Super-Ontology-${version}-${os}-${arch}.${ext}
 win:
   target:
     - target: nsis
@@ -49,5 +49,5 @@ linux:
     - target: AppImage
       arch: [x64]
   category: Office
-  maintainer: Facet BI contributors
+  maintainer: Super Ontology contributors
 publish: null

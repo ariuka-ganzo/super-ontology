@@ -1,6 +1,6 @@
-# Facet BI architecture and v0.1 spec
+# Super Ontology architecture and v0.1 spec
 
-Facet BI is a free, open-source desktop app for exploring local data and building interactive dashboards. See [RESEARCH.md](RESEARCH.md) for the reasoning behind this scope.
+Super Ontology is a free, open-source desktop app for exploring local data and building interactive dashboards. See [RESEARCH.md](RESEARCH.md) for the reasoning behind this scope.
 
 ## Stack
 
@@ -23,7 +23,7 @@ Renderer (React, sandboxed)
    |  typed IPC through a preload allowlist
 Main process
    |-- engine/      DuckDB connection, import, query execution, cancellation
-   |-- project/     load and save .facet projects
+   |-- project/     load and save .ontology projects
 Shared (pure TypeScript, no Electron imports, fully unit tested)
    |-- formula/     parser and type checker for the formula language
    |-- compiler/    VizSpec + Model -> SQL
@@ -92,7 +92,7 @@ Errors show the position and a plain-language message. Saved formulas are either
 
 ## Project file
 
-A `.facet` file is pretty-printed JSON with a `formatVersion`, so projects diff well in Git. It stores data source paths relative to the project where possible, plus model, formulas, worksheets and dashboards. Data is not embedded in v0.1. Unknown future versions must be refused with a clear message and never overwritten. Saves are atomic (temp file, then rename).
+A `.ontology` file is pretty-printed JSON with a `formatVersion`, so projects diff well in Git. It stores data source paths relative to the project where possible, plus model, formulas, worksheets and dashboards. Data is not embedded in v0.1. Unknown future versions must be refused with a clear message and never overwritten. Saves are atomic (temp file, then rename).
 
 ## Security and privacy
 

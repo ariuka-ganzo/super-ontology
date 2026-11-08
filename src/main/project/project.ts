@@ -51,11 +51,11 @@ export async function saveProject(project: Project, path: string): Promise<void>
   const existing = await existingVersion(path);
   if (existing !== null && existing > FORMAT_VERSION)
     throw new ProjectError(
-      `${path} was saved by a newer version of Facet BI (format ${existing}). It will not be overwritten. Save to a different file.`,
+      `${path} was saved by a newer version of Super Ontology (format ${existing}). It will not be overwritten. Save to a different file.`,
       'newer'
     );
   const text = serializeProject(parsed.data as Project, path);
-  const tmp = join(dirname(path), `.${randomBytes(6).toString('hex')}.facet-tmp`);
+  const tmp = join(dirname(path), `.${randomBytes(6).toString('hex')}.ontology-tmp`);
   try {
     await fs.writeFile(tmp, text, { encoding: 'utf8', flag: 'wx' });
     await fs.rename(tmp, path);
@@ -72,21 +72,21 @@ export async function loadProject(path: string): Promise<Project> {
     raw = JSON.parse(await fs.readFile(path, 'utf8'));
   } catch (e) {
     throw new ProjectError(
-      e instanceof SyntaxError ? `${path} is not a valid Facet BI project (it is not JSON).` : `Could not open ${path}: ${(e as Error).message}`,
+      e instanceof SyntaxError ? `${path} is not a valid Super Ontology project (it is not JSON).` : `Could not open ${path}: ${(e as Error).message}`,
       e instanceof SyntaxError ? 'invalid' : 'io'
     );
   }
   const version = (raw as { formatVersion?: unknown } | null)?.formatVersion;
-  if (typeof version !== 'number') throw new ProjectError(`${path} is not a Facet BI project (no formatVersion).`);
+  if (typeof version !== 'number') throw new ProjectError(`${path} is not a Super Ontology project (no formatVersion).`);
   if (version > FORMAT_VERSION)
     throw new ProjectError(
-      `This project was made with a newer version of Facet BI (format ${version}; this version reads format ${FORMAT_VERSION}). Update Facet BI to open it. The file has not been changed.`,
+      `This project was made with a newer version of Super Ontology (format ${version}; this version reads format ${FORMAT_VERSION}). Update Super Ontology to open it. The file has not been changed.`,
       'newer'
     );
   const parsed = projectSchema.safeParse(raw);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
-    throw new ProjectError(`${path} is not a valid Facet BI project: ${issue?.path.join('.')} ${issue?.message}`);
+    throw new ProjectError(`${path} is not a valid Super Ontology project: ${issue?.path.join('.')} ${issue?.message}`);
   }
   const project = parsed.data as Project;
   for (const t of project.model.tables) t.source.path = toAbsolutePath(path, t.source.path);

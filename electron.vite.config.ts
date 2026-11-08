@@ -8,7 +8,7 @@ import type { Plugin } from 'vite';
 // only during `npm run dev` it is relaxed to allow those, still from localhost only.
 function devCsp(): Plugin {
   return {
-    name: 'facet-dev-csp',
+    name: 'ontology-dev-csp',
     apply: 'serve',
     transformIndexHtml(html) {
       return html.replace(

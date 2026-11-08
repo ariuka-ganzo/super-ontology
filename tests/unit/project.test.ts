@@ -41,8 +41,8 @@ function sample(dataPath: string): Project {
 
 describe('project files', () => {
   it('saves pretty-printed JSON with relative paths and loads it back', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'facet-proj-'));
-    const file = join(dir, 'p.facet');
+    const dir = mkdtempSync(join(tmpdir(), 'ontology-proj-'));
+    const file = join(dir, 'p.ontology');
     const data = join(dir, 'data', 'sales.csv');
     await saveProject(sample(data), file);
     const text = readFileSync(file, 'utf8');
@@ -52,12 +52,12 @@ describe('project files', () => {
     expect(loaded.model.tables[0].source.path).toBe(data);
     expect(loaded.worksheets[0].spec.rows[0].agg).toBe('SUM');
     // No temporary files left behind.
-    expect(readdirSync(dir).filter((f) => f.endsWith('.facet-tmp'))).toEqual([]);
+    expect(readdirSync(dir).filter((f) => f.endsWith('.ontology-tmp'))).toEqual([]);
   });
 
   it('refuses newer format versions and never overwrites them', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'facet-proj-'));
-    const file = join(dir, 'future.facet');
+    const dir = mkdtempSync(join(tmpdir(), 'ontology-proj-'));
+    const file = join(dir, 'future.ontology');
     const future = JSON.stringify({ formatVersion: FORMAT_VERSION + 1, something: 'new' });
     writeFileSync(file, future);
     await expect(loadProject(file)).rejects.toMatchObject({ code: 'newer' });
@@ -66,18 +66,18 @@ describe('project files', () => {
   });
 
   it('rejects files that are not valid projects', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'facet-proj-'));
-    writeFileSync(join(dir, 'a.facet'), 'not json');
-    await expect(loadProject(join(dir, 'a.facet'))).rejects.toThrow(/not JSON/);
-    writeFileSync(join(dir, 'b.facet'), JSON.stringify({ formatVersion: 1, name: 'x' }));
-    await expect(loadProject(join(dir, 'b.facet'))).rejects.toThrow(/not a valid Facet BI project/);
+    const dir = mkdtempSync(join(tmpdir(), 'ontology-proj-'));
+    writeFileSync(join(dir, 'a.ontology'), 'not json');
+    await expect(loadProject(join(dir, 'a.ontology'))).rejects.toThrow(/not JSON/);
+    writeFileSync(join(dir, 'b.ontology'), JSON.stringify({ formatVersion: 1, name: 'x' }));
+    await expect(loadProject(join(dir, 'b.ontology'))).rejects.toThrow(/not a valid Super Ontology project/);
   });
 
   it('keeps paths absolute when they cannot be made relative', () => {
     if (process.platform === 'win32') {
-      expect(toStoredPath('C:\\p\\x.facet', 'D:\\data\\a.csv')).toBe('D:\\data\\a.csv');
+      expect(toStoredPath('C:\\p\\x.ontology', 'D:\\data\\a.csv')).toBe('D:\\data\\a.csv');
     }
-    expect(toAbsolutePath('/p/x.facet', '/abs/a.csv')).toBe('/abs/a.csv');
-    expect(toStoredPath(join(tmpdir(), 'x.facet'), join(tmpdir(), 'a', 'b.csv'))).toBe('a/b.csv');
+    expect(toAbsolutePath('/p/x.ontology', '/abs/a.csv')).toBe('/abs/a.csv');
+    expect(toStoredPath(join(tmpdir(), 'x.ontology'), join(tmpdir(), 'a', 'b.csv'))).toBe('a/b.csv');
   });
 });

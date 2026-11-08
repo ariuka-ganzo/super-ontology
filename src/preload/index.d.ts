@@ -1,8 +1,8 @@
-import type { FacetApi } from '../shared/api';
+import type { OntologyApi } from '../shared/api';
 
 declare global {
   interface Window {
-    facet: FacetApi;
+    ontology: OntologyApi;
   }
 }
 export {};

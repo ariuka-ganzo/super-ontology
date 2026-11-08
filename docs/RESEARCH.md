@@ -6,7 +6,7 @@ Researched 2026-11-05. Prices come from third-party sites, not vendor price list
 
 Both products are the same four layers: connect to data, model it, build visuals by dragging fields, and arrange them into an interactive dashboard. Those layers can be built well with open-source parts today, mainly DuckDB for the engine and Apache ECharts for charts.
 
-What cannot be matched in a first version is the ecosystem: hundreds of connectors, the DAX and Power Query languages, cloud sharing and governance. Facet BI therefore targets one person analysing local files on their own computer, on any OS, for free.
+What cannot be matched in a first version is the ecosystem: hundreds of connectors, the DAX and Power Query languages, cloud sharing and governance. Super Ontology therefore targets one person analysing local files on their own computer, on any OS, for free.
 
 ## Side by side
 
@@ -55,7 +55,7 @@ What cannot be matched in a first version is the ecosystem: hundreds of connecto
 
 ## Open-source tools already in this space
 
-Metabase and Apache Superset are server-hosted web apps. Rill and Evidence are BI-as-code tools that work with DuckDB, but the sources reviewed do not describe them as packaged desktop apps. No source reviewed showed a drag-and-drop desktop-first tool, which is the gap Facet BI aims at. This was a light survey rather than an exhaustive one, so check again before making public claims about being the only one.
+Metabase and Apache Superset are server-hosted web apps. Rill and Evidence are BI-as-code tools that work with DuckDB, but the sources reviewed do not describe them as packaged desktop apps. No source reviewed showed a drag-and-drop desktop-first tool, which is the gap Super Ontology aims at. This was a light survey rather than an exhaustive one, so check again before making public claims about being the only one.
 
 ## Legal guardrails
 

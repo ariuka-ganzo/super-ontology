@@ -1,4 +1,4 @@
-// The typed API the preload script exposes to the renderer as `window.facet`.
+// The typed API the preload script exposes to the renderer as `window.ontology`.
 import type { ColumnDef, FilterDef, Model, Project, QueryResult, Relationship, Scalar, TableDef, TableSource, VizSpec } from './types';
 
 export interface ImportResult {
@@ -60,7 +60,7 @@ export interface QueryRequest {
   maxRows?: number;
 }
 
-export interface FacetApi {
+export interface OntologyApi {
   chooseDataFiles(): Promise<string[]>;
   pathForFile(file: File): string;
   sourceFromPath(path: string): Promise<TableSource & { sheets?: string[] }>;

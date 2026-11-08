@@ -5,8 +5,8 @@ import { join } from 'node:path';
 import { launch, ROOT, shot, stubDialogs, tempDir } from './helpers';
 
 // Measures the v0.1 target: a 1 million row CSV imported and charted in under 5 seconds.
-// Run with FACET_PERF=1. Not part of the normal test run because it writes a 50 MB file.
-test.skip(!process.env['FACET_PERF'], 'set FACET_PERF=1 to run the performance test');
+// Run with ONTOLOGY_PERF=1. Not part of the normal test run because it writes a 50 MB file.
+test.skip(!process.env['ONTOLOGY_PERF'], 'set ONTOLOGY_PERF=1 to run the performance test');
 
 test('1 million row CSV: import and first chart', async () => {
   const csv = join(tempDir(), 'one-million.csv');

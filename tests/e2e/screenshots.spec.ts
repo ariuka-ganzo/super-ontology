@@ -2,8 +2,8 @@ import { expect, test } from '@playwright/test';
 import { join } from 'node:path';
 import { launch, ROOT } from './helpers';
 
-// Captures the README screenshots from the real app. Run with FACET_SCREENSHOTS=1.
-test.skip(!process.env['FACET_SCREENSHOTS'], 'set FACET_SCREENSHOTS=1 to capture README screenshots');
+// Captures the README screenshots from the real app. Run with ONTOLOGY_SCREENSHOTS=1.
+test.skip(!process.env['ONTOLOGY_SCREENSHOTS'], 'set ONTOLOGY_SCREENSHOTS=1 to capture README screenshots');
 
 const out = (name: string): string => join(ROOT, 'docs', 'screenshots', `${name}.png`);
 

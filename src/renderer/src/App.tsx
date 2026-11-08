@@ -40,13 +40,13 @@ export function App(): React.JSX.Element {
   }, [theme]);
 
   useEffect(() => {
-    void window.facet.setTitle(name || 'Untitled', dirty);
+    void window.ontology.setTitle(name || 'Untitled', dirty);
   }, [name, dirty]);
 
   useEffect(() => {
     // Listen before asking for startup info, so a file opened from the OS in between is not lost.
-    const off = window.facet.onOpenPath((path) => void openProject(path));
-    void window.facet.startup().then((info) => {
+    const off = window.ontology.onOpenPath((path) => void openProject(path));
+    void window.ontology.startup().then((info) => {
       if (info.openPath) void openProject(info.openPath);
       else if (info.firstRun) void openSample(true);
     });
@@ -83,7 +83,7 @@ export function App(): React.JSX.Element {
           return setAbout(true);
       }
     };
-    return window.facet.onMenu(handle);
+    return window.ontology.onMenu(handle);
   }, []);
 
   useEffect(() => {
@@ -112,7 +112,7 @@ export function App(): React.JSX.Element {
         e.preventDefault();
         setDropping(false);
         const paths = Array.from(e.dataTransfer.files)
-          .map((f) => window.facet.pathForFile(f))
+          .map((f) => window.ontology.pathForFile(f))
           .filter(Boolean);
         if (paths.length) void importPaths(paths);
       }}
@@ -138,14 +138,14 @@ export function App(): React.JSX.Element {
         ))}
       </div>
       {about && (
-        <Modal title="About Facet BI" onClose={() => setAbout(false)}>
+        <Modal title="About Super Ontology" onClose={() => setAbout(false)}>
           <div className="col">
             <div className="row">
               <Logo />
-              <b>Facet BI 0.1</b>
+              <b>Super Ontology 0.1</b>
             </div>
             <p>A free, open-source desktop app for exploring local data and building interactive dashboards. MIT licence.</p>
-            <p className="muted">Your data stays on your computer. Facet BI makes no network requests and collects no telemetry.</p>
+            <p className="muted">Your data stays on your computer. Super Ontology makes no network requests and collects no telemetry.</p>
             <p className="muted">Built with Electron, React, DuckDB and Apache ECharts.</p>
           </div>
         </Modal>
@@ -167,7 +167,7 @@ function TopBar(): React.JSX.Element {
     <header className="topbar">
       <div className="brand">
         <Logo />
-        Facet BI
+        Super Ontology
       </div>
       <input
         className="project-name"

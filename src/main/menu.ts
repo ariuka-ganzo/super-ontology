@@ -50,7 +50,7 @@ export function buildMenu(getWindow: () => BrowserWindow | null, devTools: boole
     {
       label: 'Help',
       submenu: [
-        { label: 'About Facet BI', click: send('about') },
+        { label: 'About Super Ontology', click: send('about') },
         { label: `Version ${app.getVersion()}`, enabled: false },
         { type: 'separator' },
         { label: 'Show data folder', click: () => void shell.openPath(app.getPath('userData')) }

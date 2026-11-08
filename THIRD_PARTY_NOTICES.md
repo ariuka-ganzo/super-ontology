@@ -1,6 +1,6 @@
 # Third-party notices
 
-Facet BI is MIT licensed. Its installers include the open-source components below. Each keeps its own licence, and each licence permits redistribution in an MIT-licensed application. Full licence texts are in each package's folder under `node_modules` in the source tree.
+Super Ontology is MIT licensed. Its installers include the open-source components below. Each keeps its own licence, and each licence permits redistribution in an MIT-licensed application. Full licence texts are in each package's folder under `node_modules` in the source tree.
 
 | Component | Version | Licence | Used for |
 |---|---|---|---|

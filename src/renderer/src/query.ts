@@ -49,12 +49,12 @@ export function useVizQuery(model: Model, spec: VizSpec | null, externalFilters?
       return;
     }
     const requestId = newId('q');
-    if (running.current) void window.facet.cancel(running.current);
+    if (running.current) void window.ontology.cancel(running.current);
     running.current = requestId;
     setState((s) => ({ ...s, loading: true }));
     let alive = true;
     const timer = setTimeout(() => {
-      window.facet
+      window.ontology
         .query({ requestId, model, spec, externalFilters, maxRows })
         .then((result) => {
           cache.set(key, result);
@@ -79,14 +79,14 @@ export function useVizQuery(model: Model, spec: VizSpec | null, externalFilters?
 
   useEffect(
     () => () => {
-      if (running.current) void window.facet.cancel(running.current);
+      if (running.current) void window.ontology.cancel(running.current);
     },
     []
   );
 
   const cancel = (): void => {
     if (!running.current) return;
-    void window.facet.cancel(running.current);
+    void window.ontology.cancel(running.current);
     running.current = null;
     setState({ result: null, error: 'Query cancelled. Change the view or press Run again to retry.', loading: false });
   };

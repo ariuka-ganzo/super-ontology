@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
  */
 export function projectFromArgv(argv: readonly string[], cwd: string): string | null {
   for (const a of argv.slice(1)) {
-    if (a.startsWith('-') || !a.toLowerCase().endsWith('.facet')) continue;
+    if (a.startsWith('-') || !a.toLowerCase().endsWith('.ontology')) continue;
     return resolve(cwd, a);
   }
   return null;
