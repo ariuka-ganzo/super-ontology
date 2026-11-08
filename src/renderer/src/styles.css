@@ -487,7 +487,7 @@ h3 {
 
 .data-layout {
   display: grid;
-  grid-template-columns: 1fr 300px;
+  grid-template-columns: 250px minmax(0, 1fr) 300px;
   height: 100%;
   min-height: 0;
 }
@@ -1185,4 +1185,80 @@ textarea.tile-text-edit {
   .tile {
     break-inside: avoid;
   }
+}
+
+/* Cleaning steps in the data view */
+.steps {
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  overflow-y: auto;
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+.steps p {
+  margin: 0;
+}
+.steps .step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  text-align: left;
+  padding: 0;
+  white-space: normal;
+}
+.steps button.step {
+  padding: 5px 6px;
+  gap: 6px;
+}
+.steps .step.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.steps .step.failed {
+  border-color: var(--danger);
+}
+.steps .step.skipped {
+  opacity: 0.55;
+}
+.steps .step-main {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  border: none;
+  background: none;
+  text-align: left;
+  white-space: normal;
+  padding: 5px 6px;
+  min-width: 0;
+}
+.steps .step-n {
+  color: var(--faint);
+  min-width: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.steps .step-tools {
+  display: flex;
+}
+.steps .step-tools button {
+  padding: 1px 4px;
+}
+.steps .step-error {
+  width: 100%;
+  padding: 4px 8px 6px 26px;
+  color: var(--danger);
+}
+.checks {
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  gap: 4px;
 }

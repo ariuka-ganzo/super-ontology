@@ -5,6 +5,7 @@ import { MenuItem, Popover } from './components/Popover';
 import { Modal } from './components/Modal';
 import { SheetPicker } from './components/SheetPicker';
 import { newId } from './ids';
+import { startPrepSync } from './prepSync';
 import { newDashboard, newWorksheet, useStore, type View } from './store';
 import { DashboardView } from './views/DashboardView';
 import { DataView } from './views/DataView';
@@ -39,6 +40,8 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+
+  useEffect(() => startPrepSync(), []);
 
   useEffect(() => {
     void window.ontology.setTitle(name || 'Untitled', dirty);

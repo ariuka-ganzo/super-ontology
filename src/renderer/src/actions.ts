@@ -2,6 +2,7 @@ import type { OpenProjectResult } from '@shared/api';
 import type { Project, TableDef, TableSource } from '@shared/types';
 import { pickSheets } from './components/SheetPicker';
 import { newId } from './ids';
+import { mergeColumns, queueDependents } from './prepSync';
 import { clearQueryCache } from './query';
 import { newProject, useStore } from './store';
 
@@ -111,7 +112,7 @@ export async function reloadTable(tableId: string, newPath?: string): Promise<vo
       source = located;
     }
     s().setBusy(`Reloading ${table.name}…`);
-    const r = await window.ontology.importTable(tableId, source);
+    const r = await window.ontology.importTable(tableId, source, table.steps);
     const before = new Set(table.columns.map((c) => c.name));
     const after = new Set(r.columns.map((c) => c.name));
     const added = [...after].filter((c) => !before.has(c));
@@ -120,14 +121,14 @@ export async function reloadTable(tableId: string, newPath?: string): Promise<vo
       const t = p.model.tables.find((x) => x.id === tableId);
       if (!t) return;
       t.source = source;
-      t.columns = r.columns.map((c) => {
-        const old = t.columns.find((o) => o.name === c.name);
-        return old?.override ? { ...c, override: old.override } : c;
-      });
+      t.columns = mergeColumns(t.columns, r.columns);
       t.rowCount = r.rowCount;
     });
     s().setTableError(tableId, null);
+    s().setStepError(tableId, r.stepError ?? null);
     clearQueryCache();
+    s().dataChanged();
+    queueDependents(tableId);
     if (added.length || removed.length) {
       const parts = [];
       if (removed.length) parts.push(`removed: ${removed.join(', ')}. Views and calculations that use them will show an error until you fix them`);
@@ -164,9 +165,11 @@ function confirmDiscard(): boolean {
 function applyOpened(r: OpenProjectResult): void {
   clearQueryCache();
   const errors = Object.fromEntries(r.tableErrors.map((e) => [e.tableId, e.message]));
-  s().load(r.project, r.path, errors);
+  const stepErrors = Object.fromEntries(r.stepErrors.map((e) => [e.tableId, { stepId: e.stepId, message: e.message }]));
+  s().load(r.project, r.path, errors, stepErrors);
   s().go(r.project.dashboards.some((d) => d.pages.some((p) => p.tiles.length)) ? 'dashboard' : 'worksheet');
   for (const e of r.tableErrors) s().toast('error', e.message);
+  for (const e of r.stepErrors) s().toast('error', `A cleaning step could not be applied. ${e.message}`);
   for (const c of r.changed) {
     const t = r.project.model.tables.find((x) => x.id === c.tableId);
     s().toast(

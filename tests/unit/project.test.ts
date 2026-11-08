@@ -46,7 +46,7 @@ describe('project files', () => {
     const data = join(dir, 'data', 'sales.csv');
     await saveProject(sample(data), file);
     const text = readFileSync(file, 'utf8');
-    expect(text).toContain('\n  "formatVersion": 1,');
+    expect(text).toContain('\n  "formatVersion": 2,');
     expect(JSON.parse(text).model.tables[0].source.path).toBe('data/sales.csv');
     const loaded = await loadProject(file);
     expect(loaded.model.tables[0].source.path).toBe(data);

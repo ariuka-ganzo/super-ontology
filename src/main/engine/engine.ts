@@ -14,11 +14,12 @@ import { DuckDBInstance, type DuckDBConnection, type DuckDBResult, type DuckDBTy
 import { promises as fs } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
-import type { CardinalityResult, ColumnProfile, ImportResult, PreviewResult, QueryRequest } from '@shared/api';
+import type { CardinalityResult, ColumnProfile, ImportResult, PrepareResult, PreviewResult, QueryRequest } from '@shared/api';
 import { compileViz, type CompiledQuery } from '@shared/compiler/compile';
 import { duckTypeToDataType, engineTableName, quoteIdent as q, sqlType } from '@shared/compiler/sql';
 import { classifyCardinality } from '@shared/model/relationships';
-import type { ColumnDef, DataType, Model, QueryResult, Relationship, Scalar, TableDef, TableSource } from '@shared/types';
+import { appendSources, compilePrep, type PrepColumn, type PrepSource } from '@shared/prep/prep';
+import type { ColumnDef, DataType, Model, PrepStep, QueryResult, Relationship, Scalar, TableDef, TableSource } from '@shared/types';
 import { readExcelToCsv } from './excel';
 import { toScalar } from './values';
 
@@ -77,8 +78,11 @@ export class Engine {
 
   // ------------------------------------------------------------------ import
 
-  /** Imports a file into the engine table for `tableId`, replacing any previous data. */
-  async importTable(tableId: string, source: TableSource): Promise<ImportResult> {
+  /**
+   * Imports a file for `tableId`, replacing any previous data, then applies the table's cleaning steps.
+   * The file's rows are kept unchanged in a raw table, so steps can be edited without reading the file again.
+   */
+  async importTable(tableId: string, source: TableSource, steps: PrepStep[] = []): Promise<ImportResult> {
     const started = Date.now();
     // Only data files can be imported, whatever path reaches the engine (for example from a project file).
     if (!FORMAT_EXTENSIONS[source.format]?.includes(extname(source.path).toLowerCase()))
@@ -110,12 +114,9 @@ export class Engine {
       if (described.length === 0) throw new EngineError('The file has no columns', 'invalid');
       const select = described.map((c) => (isScalarType(c.type) ? q(c.name) : `CAST(${q(c.name)} AS VARCHAR) AS ${q(c.name)}`)).join(', ');
       const result = await rc.stream(`SELECT ${select} FROM ${reader}`, [path]);
-      const rowCount = await this.copyInto(tableId, result);
-      const columns: ColumnDef[] = result.columnNames().map((name, i) => {
-        const t = result.columnTypes()[i].toString();
-        return { name, sourceType: t, type: duckTypeToDataType(t) };
-      });
-      return { columns, rowCount, elapsedMs: Date.now() - started };
+      await this.copyInto(tableId, result);
+      const prepared = await this.applySteps(tableId, steps);
+      return { ...prepared, elapsedMs: Date.now() - started };
     } catch (e) {
       if (e instanceof EngineError) throw e;
       throw new EngineError(`Could not read ${source.path}: ${cleanMessage(e)}`, 'invalid');
@@ -128,7 +129,7 @@ export class Engine {
   private async copyInto(tableId: string, result: DuckDBResult): Promise<number> {
     const names = result.columnNames();
     const types = result.columnTypes();
-    const final = engineTableName(tableId);
+    const final = rawTableName(tableId);
     const staging = `${final}__loading`;
     return this.withQuery(async (c) => {
       await c.run(`DROP TABLE IF EXISTS ${q(staging)}`);
@@ -155,24 +156,97 @@ export class Engine {
     });
   }
 
+  /**
+   * Builds the table that views query from the raw import and the cleaning steps. With no steps it is
+   * a view of the raw table, so no data is copied. With steps it is a new table, built with bound
+   * parameters and swapped in once complete. A step that does not fit, or fails when run, is reported
+   * in `stepError`, and the table then reflects the steps before it.
+   */
+  async applySteps(tableId: string, steps: PrepStep[]): Promise<PrepareResult> {
+    const raw = rawTableName(tableId);
+    const final = engineTableName(tableId);
+    return this.withQuery(async (c) => {
+      if ((await relationType(c, raw)) === null) throw new EngineError('The table has no data loaded. Reload it from its source.', 'missing');
+      const base: PrepSource = { ref: q(raw), columns: await describeColumns(c, q(raw)) };
+      const others = new Map<string, PrepSource>();
+      for (const id of appendSources(steps)) {
+        const name = engineTableName(id);
+        if (id !== tableId && (await relationType(c, name)) !== null) others.set(id, { ref: q(name), columns: await describeColumns(c, q(name)) });
+      }
+      let compiled = compilePrep(base, steps, (id) => others.get(id), tableId);
+      let stepError = compiled.error ? { stepId: compiled.error.stepId, message: compiled.error.message } : undefined;
+      const staging = `${final}__prep`;
+      await dropRelation(c, staging);
+      if (compiled.applied > 0) {
+        // Run the steps; if one fails at run time (for example two appended columns that cannot be combined),
+        // drop steps from the end until the rest run, and report the first step left out.
+        for (;;) {
+          try {
+            await c.run(`CREATE TABLE ${q(staging)} AS ${compiled.sql}`, compiled.params);
+            break;
+          } catch (e) {
+            const failed = steps[compiled.applied - 1];
+            stepError = { stepId: failed.id, message: cleanMessage(e) };
+            compiled = compilePrep(base, steps.slice(0, compiled.applied - 1), (id) => others.get(id), tableId);
+            if (compiled.applied === 0) break;
+          }
+        }
+      }
+      await dropRelation(c, final);
+      if (compiled.applied > 0) await c.run(`ALTER TABLE ${q(staging)} RENAME TO ${q(final)}`);
+      else await c.run(`CREATE VIEW ${q(final)} AS SELECT * FROM ${q(raw)}`);
+      const r = await c.runAndReadAll(`DESCRIBE SELECT * FROM ${q(final)}`);
+      const columns: ColumnDef[] = r.getRowsJS().map((row) => {
+        const t = String(row[1]);
+        return { name: String(row[0]), sourceType: t, type: duckTypeToDataType(t) };
+      });
+      const count = await c.runAndReadAll(`SELECT COUNT(*) FROM ${q(final)}`);
+      return { columns, rowCount: Number(count.getRowsJS()[0][0]), stepError };
+    });
+  }
+
   async dropTable(tableId: string): Promise<void> {
-    await this.withQuery((c) => c.run(`DROP TABLE IF EXISTS ${q(engineTableName(tableId))}`));
+    await this.withQuery(async (c) => {
+      await dropRelation(c, engineTableName(tableId));
+      await dropRelation(c, `${engineTableName(tableId)}__prep`);
+      await dropRelation(c, rawTableName(tableId));
+    });
   }
 
   async hasTable(tableId: string): Promise<boolean> {
-    return this.withQuery(async (c) => {
-      const r = await c.runAndReadAll('SELECT COUNT(*) FROM duckdb_tables() WHERE table_name = $1', [engineTableName(tableId)]);
-      return Number(r.getRowsJS()[0][0]) > 0;
-    });
+    return this.withQuery(async (c) => (await relationType(c, engineTableName(tableId))) !== null);
   }
 
   // ------------------------------------------------------------------ data view
 
-  async preview(table: TableDef, limit: number, offset: number): Promise<PreviewResult> {
+  /**
+   * Rows of a table for the data view. With `uptoStep`, shows the data as it is right after that
+   * cleaning step instead of after all of them (type overrides are not applied then).
+   */
+  async preview(table: TableDef, limit: number, offset: number, uptoStep?: string): Promise<PreviewResult> {
     return this.withQuery(async (c) => {
-      const src = typedSource(table);
-      const r = await c.runAndReadAll(`SELECT * FROM ${src} LIMIT $1 OFFSET $2`, [limit, offset]);
-      const total = await c.runAndReadAll(`SELECT COUNT(*) FROM ${q(engineTableName(table.id))}`);
+      let src = typedSource(table);
+      let params: Scalar[] = [];
+      const steps = table.steps ?? [];
+      const upto = uptoStep ? steps.findIndex((s) => s.id === uptoStep) : -1;
+      if (upto >= 0) {
+        const raw = rawTableName(table.id);
+        const base: PrepSource = { ref: q(raw), columns: await describeColumns(c, q(raw)) };
+        const others = new Map<string, PrepSource>();
+        for (const id of appendSources(steps.slice(0, upto + 1))) {
+          const name = engineTableName(id);
+          if (id !== table.id && (await relationType(c, name)) !== null) others.set(id, { ref: q(name), columns: await describeColumns(c, q(name)) });
+        }
+        const compiled = compilePrep(base, steps.slice(0, upto + 1), (id) => others.get(id), table.id);
+        src = `(${compiled.sql})`;
+        params = compiled.params;
+      }
+      const n = params.length;
+      const r = await c.runAndReadAll(`SELECT * FROM ${src} AS p LIMIT $${n + 1} OFFSET $${n + 2}`, [...params, limit, offset]);
+      const total = await c.runAndReadAll(
+        upto >= 0 ? `SELECT COUNT(*) FROM ${src} AS p` : `SELECT COUNT(*) FROM ${q(engineTableName(table.id))}`,
+        upto >= 0 ? params : []
+      );
       return { columns: r.columnNames(), rows: convertRows(r.getRowsJS(), r.columnTypes()), total: Number(total.getRowsJS()[0][0]) };
     });
   }
@@ -317,6 +391,28 @@ export class Engine {
     this.query_.closeSync();
     this.reader.closeSync();
   }
+}
+
+/** The unchanged rows of the file a table was imported from. Views never read it directly. */
+function rawTableName(tableId: string): string {
+  return `${engineTableName(tableId)}__raw`;
+}
+
+/** 'table', 'view', or null when there is no relation with that name. */
+async function relationType(c: DuckDBConnection, name: string): Promise<'table' | 'view' | null> {
+  const r = await c.runAndReadAll('SELECT table_type FROM information_schema.tables WHERE table_name = $1', [name]);
+  const t = r.getRowsJS()[0]?.[0];
+  return t === undefined ? null : String(t) === 'VIEW' ? 'view' : 'table';
+}
+
+async function dropRelation(c: DuckDBConnection, name: string): Promise<void> {
+  const t = await relationType(c, name);
+  if (t) await c.run(`DROP ${t === 'view' ? 'VIEW' : 'TABLE'} ${q(name)}`);
+}
+
+async function describeColumns(c: DuckDBConnection, ref: string): Promise<PrepColumn[]> {
+  const r = await c.runAndReadAll(`DESCRIBE SELECT * FROM ${ref}`);
+  return r.getRowsJS().map((row) => ({ name: String(row[0]), type: duckTypeToDataType(String(row[1])) }));
 }
 
 function readerSql(format: TableSource['format']): string {

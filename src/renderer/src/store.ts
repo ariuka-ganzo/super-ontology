@@ -11,6 +11,11 @@ export interface Toast {
   text: string;
 }
 
+export interface StepError {
+  stepId: string;
+  message: string;
+}
+
 export interface CrossFilter {
   tileId: string;
   filters: FilterDef[];
@@ -56,6 +61,10 @@ interface State {
   tableId: string | null;
   theme: ThemeName;
   tableErrors: Record<string, string>;
+  /** Per table, the first cleaning step that could not be applied. */
+  stepErrors: Record<string, StepError>;
+  /** Goes up whenever the engine's data for a table changes, so views of the data reload. */
+  dataVersion: number;
   toasts: Toast[];
   crossFilters: Record<string, CrossFilter | undefined>;
   busy: string | null;
@@ -64,7 +73,7 @@ interface State {
   update(fn: (p: Project) => void, opts?: { history?: boolean }): void;
   undo(): void;
   redo(): void;
-  load(project: Project, path: string | null, tableErrors?: Record<string, string>): void;
+  load(project: Project, path: string | null, tableErrors?: Record<string, string>, stepErrors?: Record<string, StepError>): void;
   markSaved(path: string): void;
   go(view: View, id?: string | null): void;
   setPage(pageId: string): void;
@@ -73,6 +82,8 @@ interface State {
   toast(kind: Toast['kind'], text: string): void;
   dismiss(id: string): void;
   setTableError(id: string, message: string | null): void;
+  setStepError(tableId: string, error: StepError | null): void;
+  dataChanged(): void;
   setCrossFilter(pageId: string, cf: CrossFilter | undefined): void;
   setBusy(text: string | null): void;
 }
@@ -90,6 +101,8 @@ export const useStore = create<State>((set, get) => ({
   tableId: null,
   theme: initialTheme(),
   tableErrors: {},
+  stepErrors: {},
+  dataVersion: 0,
   toasts: [],
   crossFilters: {},
   busy: null,
@@ -116,7 +129,7 @@ export const useStore = create<State>((set, get) => ({
     if (!next) return;
     set({ project: next, past: [...past, project], future: future.slice(1), dirty: true });
   },
-  load(project, path, tableErrors = {}) {
+  load(project, path, tableErrors = {}, stepErrors = {}) {
     const ws = project.worksheets[0]?.id ?? null;
     const db = project.dashboards[0];
     set({
@@ -126,6 +139,7 @@ export const useStore = create<State>((set, get) => ({
       past: [],
       future: [],
       tableErrors,
+      stepErrors,
       crossFilters: {},
       worksheetId: ws,
       dashboardId: db?.id ?? null,
@@ -173,6 +187,15 @@ export const useStore = create<State>((set, get) => ({
     if (message) next[id] = message;
     else delete next[id];
     set({ tableErrors: next });
+  },
+  setStepError(tableId, error) {
+    const next = { ...get().stepErrors };
+    if (error) next[tableId] = error;
+    else delete next[tableId];
+    set({ stepErrors: next });
+  },
+  dataChanged() {
+    set({ dataVersion: get().dataVersion + 1 });
   },
   setCrossFilter(pageId, cf) {
     set({ crossFilters: { ...get().crossFilters, [pageId]: cf } });

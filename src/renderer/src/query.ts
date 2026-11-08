@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { FilterDef, Model, QueryResult, VizSpec } from '@shared/types';
 import { compileViz } from '@shared/compiler/compile';
 import { newId } from './ids';
+import { useStore } from './store';
 
 export interface QueryState {
   result: QueryResult | null;
@@ -29,7 +30,10 @@ export function clearQueryCache(): void {
 export function useVizQuery(model: Model, spec: VizSpec | null, externalFilters?: FilterDef[], maxRows?: number): QueryHandle {
   const [state, setState] = useState<QueryState>({ result: null, error: null, loading: false });
   const running = useRef<string | null>(null);
-  const key = spec ? JSON.stringify([model, spec, externalFilters ?? [], maxRows ?? null]) : '';
+  // The data version makes views re-query when a table's data changes without its columns changing,
+  // for example after a reload or a cleaning step that only changes values.
+  const dataVersion = useStore((s) => s.dataVersion);
+  const key = spec ? JSON.stringify([model, spec, externalFilters ?? [], maxRows ?? null, dataVersion]) : '';
 
   useEffect(() => {
     if (!spec) {
