@@ -86,6 +86,32 @@ test('date drill, sort, filter and a calculated field', async () => {
   await shot(page, 'worksheet-filtered');
 });
 
+test('table calculations can run along a chosen dimension', async () => {
+  const { page } = l;
+  await page.getByRole('button', { name: '+ New calculation' }).click();
+  await page.getByLabel('Calculation name').fill('Share');
+  await page.getByLabel('Formula').fill('PERCENT_OF_TOTAL(SUM([amount]))');
+  await page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
+  // The control only appears once the view has a table calculation and two dimensions.
+  await page.getByTestId('field-sale_date').dblclick();
+  await page.getByTestId('field-Share').dblclick();
+  await expect(page.getByLabel('Table calculations run along')).toHaveCount(0);
+  await page.getByTestId('field-region').dblclick();
+  await page.getByTestId('chart-table').click();
+  const box = page.getByTestId('chart-box');
+  const along = page.getByLabel('Table calculations run along');
+  await expect(along).toBeVisible();
+  const share = async (month: string, region: string): Promise<string | undefined> =>
+    (await tableRows(box)).find((r) => r.includes(month) && r.includes(region))?.at(-1);
+
+  // Automatic runs along the month: East's January sales (300) are part of East's 550 across months.
+  await expect.poll(() => share('Jan 2024', 'East')).not.toBe(await share('Feb 2024', 'West'));
+  // Along region: each month's regions add up to 100%, so January East and February West are both the whole month.
+  await along.selectOption({ label: 'region' });
+  await expect.poll(async () => (await share('Jan 2024', 'East')) === (await share('Feb 2024', 'West'))).toBe(true);
+  await expect.poll(() => share('Mar 2024', 'East')).not.toBe(await share('Jan 2024', 'East'));
+});
+
 test('every chart type renders, and sorting works', async () => {
   const { page } = l;
   await page.getByTestId('field-region').dblclick();

@@ -103,7 +103,8 @@ export const vizSpecSchema = z.object({
   label: shelfItemSchema.optional(),
   tooltip: z.array(shelfItemSchema).max(50),
   filters: z.array(filterSchema).max(200),
-  sort: z.object({ itemId: id, dir: z.enum(['asc', 'desc']) }).optional()
+  sort: z.object({ itemId: id, dir: z.enum(['asc', 'desc']) }).optional(),
+  calcAlong: id.optional()
 });
 
 const layout = z.object({

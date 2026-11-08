@@ -210,7 +210,9 @@ class Compiler {
         const node = this.node(() => measureNode(f.field, f.agg, model));
         if (node.level === 'tcalc') this.fail('Filters on table calculations are not supported in this version');
         if (node.vtype !== 'number' && node.vtype !== 'null')
-          this.fail(`Aggregate conditions compare numbers, but ${itemLabel({ id: f.id, field: f.field, role: 'measure', agg: f.agg }, model)} is a ${node.vtype}`);
+          this.fail(
+            `Aggregate conditions compare numbers, but ${itemLabel({ id: f.id, field: f.field, role: 'measure', agg: f.agg }, model)} is a ${node.vtype}`
+          );
         measureWhere.push(`${this.aggSql(node)} ${f.op === '!=' ? '<>' : f.op} ${this.p.add(f.value, 'DOUBLE')}`);
       } else if (f.kind === 'topN') {
         topN.push(this.topN(f));
@@ -576,8 +578,8 @@ class Compiler {
       if (s.color === d.item) return 2;
       return 3 + ITEM_ORDER.length;
     };
-    const sorted = [...this.dims].sort((a, b) => rank(a) - rank(b));
-    const address = sorted[0];
+    const chosen = this.spec.calcAlong ? this.dims.find((d) => d.item.id === this.spec.calcAlong) : undefined;
+    const address = chosen ?? [...this.dims].sort((a, b) => rank(a) - rank(b))[0];
     return {
       order: [q(address.alias)],
       partition: this.dims.filter((d) => d !== address).map((d) => q(d.alias))
@@ -733,9 +735,7 @@ class Compiler {
     const rowWhere = [...dimWhere];
     for (const t of topN) {
       const dir = t.dir === 'top' ? 'DESC' : 'ASC';
-      rowWhere.push(
-        `${t.dim} IN (SELECT ${t.dim} FROM ${q(ranked)} GROUP BY 1 ORDER BY ${t.by} ${dir} NULLS LAST, 1 ASC LIMIT ${this.p.add(t.n, 'BIGINT')})`
-      );
+      rowWhere.push(`${t.dim} IN (SELECT ${t.dim} FROM ${q(ranked)} GROUP BY 1 ORDER BY ${t.by} ${dir} NULLS LAST, 1 ASC LIMIT ${this.p.add(t.n, 'BIGINT')})`);
     }
     if (rowWhere.length) {
       ctes.push(`"filtered" AS (SELECT * FROM ${q(rows)} WHERE ${rowWhere.join(' AND ')})`);
