@@ -95,7 +95,7 @@ export class Engine {
     let path = source.path;
     let format = source.format;
     if (format === 'excel') {
-      tempDir = await fs.mkdtemp(join(tmpdir(), 'facet-xlsx-'));
+      tempDir = await fs.mkdtemp(join(tmpdir(), 'ontology-xlsx-'));
       path = join(tempDir, 'sheet.csv');
       await readExcelToCsv(source.path, path, source.sheet);
       format = 'csv';

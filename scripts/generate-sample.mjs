@@ -326,5 +326,5 @@ const project = {
     }
   ]
 };
-writeFileSync(join(out, 'sample.facet'), JSON.stringify(project, null, 2) + '\n');
+writeFileSync(join(out, 'sample.ontology'), JSON.stringify(project, null, 2) + '\n');
 console.log(`orders: ${orders.length - 1} rows, customers: ${customers.length - 1}, products: ${products.length - 1}`);

@@ -161,7 +161,7 @@ export function registerIpc(engine: Engine, getWindow: () => BrowserWindow | nul
       const r = await dialog.showOpenDialog(win(), {
         title: 'Open project',
         properties: ['openFile'],
-        filters: [{ name: 'Facet BI project', extensions: ['facet'] }]
+        filters: [{ name: 'Super Ontology project', extensions: ['ontology'] }]
       });
       if (r.canceled || !r.filePaths[0]) return null;
       file = r.filePaths[0];
@@ -173,7 +173,7 @@ export function registerIpc(engine: Engine, getWindow: () => BrowserWindow | nul
     const s = await readSettings();
     if (!s.firstRunDone) await writeSettings({ ...s, firstRunDone: true });
     // The sample opens untitled, so saving asks for a new location instead of writing into the app folder.
-    return openFrom(join(samplesDir(), 'sample.facet'), null);
+    return openFrom(join(samplesDir(), 'sample.ontology'), null);
   });
 
   h('project:save', z.object({ project: projectSchema, path: absPath.nullable(), saveAs: z.boolean() }), async ({ project, path, saveAs }) => {
@@ -181,11 +181,11 @@ export function registerIpc(engine: Engine, getWindow: () => BrowserWindow | nul
     if (!file || saveAs) {
       const r = await dialog.showSaveDialog(win(), {
         title: 'Save project',
-        defaultPath: `${(project as Project).name || 'Untitled'}.facet`,
-        filters: [{ name: 'Facet BI project', extensions: ['facet'] }]
+        defaultPath: `${(project as Project).name || 'Untitled'}.ontology`,
+        filters: [{ name: 'Super Ontology project', extensions: ['ontology'] }]
       });
       if (r.canceled || !r.filePath) return null;
-      file = r.filePath.toLowerCase().endsWith('.facet') ? r.filePath : `${r.filePath}.facet`;
+      file = r.filePath.toLowerCase().endsWith('.ontology') ? r.filePath : `${r.filePath}.ontology`;
     }
     await saveProject(project as Project, file);
     return file;
@@ -258,7 +258,7 @@ export function registerIpc(engine: Engine, getWindow: () => BrowserWindow | nul
 
   h('app:title', z.object({ title: z.string().max(300), dirty: z.boolean() }), ({ title, dirty }) => {
     const w = win();
-    w.setTitle(`${dirty ? '• ' : ''}${title} - Facet BI`);
+    w.setTitle(`${dirty ? '• ' : ''}${title} - Super Ontology`);
     if (process.platform === 'darwin') w.setDocumentEdited(dirty);
   });
 }

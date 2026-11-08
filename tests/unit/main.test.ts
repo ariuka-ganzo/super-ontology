@@ -8,7 +8,7 @@ import { compactParams } from '@shared/compiler/sql';
 
 describe('writeChunks', () => {
   it('writes sync and async chunks', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'facet-write-'));
+    const dir = mkdtempSync(join(tmpdir(), 'ontology-write-'));
     await writeChunks(join(dir, 'a.txt'), ['a', 'b']);
     async function* gen(): AsyncGenerator<string> {
       yield 'x'.repeat(100_000);
@@ -20,14 +20,14 @@ describe('writeChunks', () => {
   });
 
   it('rejects instead of crashing when the file cannot be opened', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'facet-write-'));
+    const dir = mkdtempSync(join(tmpdir(), 'ontology-write-'));
     // A directory cannot be opened for writing, much like a file locked by another program.
     await expect(writeChunks(dir, ['a'])).rejects.toMatchObject({ code: expect.stringMatching(/^E/) });
     await expect(writeChunks(join(dir, 'missing', 'x.csv'), ['a'])).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('rejects when the source of chunks fails', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'facet-write-'));
+    const dir = mkdtempSync(join(tmpdir(), 'ontology-write-'));
     async function* bad(): AsyncGenerator<string> {
       yield 'a';
       throw new Error('query failed');
@@ -37,9 +37,9 @@ describe('writeChunks', () => {
 });
 
 describe('opening project files from the OS', () => {
-  it('finds a .facet argument and resolves it against the working directory', () => {
+  it('finds a .ontology argument and resolves it against the working directory', () => {
     const cwd = resolve('/work');
-    expect(projectFromArgv(['app.exe', '--flag', 'Sales.FACET'], cwd)).toBe(resolve(cwd, 'Sales.FACET'));
+    expect(projectFromArgv(['app.exe', '--flag', 'Sales.ONTOLOGY'], cwd)).toBe(resolve(cwd, 'Sales.ONTOLOGY'));
     expect(projectFromArgv(['app.exe', '.', '--smoke-test'], cwd)).toBeNull();
     expect(projectFromArgv(['app.exe'], cwd)).toBeNull();
   });
@@ -52,16 +52,16 @@ describe('opening project files from the OS', () => {
       delivered.push(path);
       return true;
     });
-    p.request('/a.facet');
+    p.request('/a.ontology');
     expect(delivered).toEqual([]);
-    expect(p.take()).toBe('/a.facet');
+    expect(p.take()).toBe('/a.ontology');
     expect(p.take()).toBeNull();
-    p.request('/b.facet');
-    expect(delivered).toEqual(['/b.facet']);
+    p.request('/b.ontology');
+    expect(delivered).toEqual(['/b.ontology']);
     canDeliver = false;
-    p.request('/c.facet');
+    p.request('/c.ontology');
     p.reset();
-    expect(p.take()).toBe('/c.facet');
+    expect(p.take()).toBe('/c.ontology');
   });
 });
 

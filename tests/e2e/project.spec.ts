@@ -28,7 +28,7 @@ test('saves a project, reopens it and gets the same view back', async () => {
     ]);
 
   const dir = tempDir();
-  const file = join(dir, 'my project.facet');
+  const file = join(dir, 'my project.ontology');
   await stubDialogs(app, { save: file });
   await page.getByRole('button', { name: 'Save as…' }).click();
   await expect(page.getByTestId('toast-info').filter({ hasText: 'Saved' })).toBeVisible();
@@ -59,7 +59,7 @@ test('opens a project file passed by the OS, at launch and while running', async
   l = await launch({ firstRun: false });
   await importFixtures(l, ['sales.csv']);
   const dir = tempDir();
-  const file = join(dir, 'double clicked.facet');
+  const file = join(dir, 'double clicked.ontology');
   await stubDialogs(l.app, { save: file });
   await l.page.getByRole('button', { name: 'Save as…' }).click();
   await expect(l.page.getByTestId('toast-info').filter({ hasText: 'Saved' })).toBeVisible();
@@ -76,7 +76,7 @@ test('opens a project file passed by the OS, at launch and while running', async
   await expect(name).toHaveValue('Untitled');
   const exe = await l.app.evaluate(() => process.execPath);
   const userData = l.userData;
-  const second = spawn(exe, appArgs([file]), { env: { ...process.env, FACET_USER_DATA: userData, NODE_ENV: 'production' }, stdio: 'ignore' });
+  const second = spawn(exe, appArgs([file]), { env: { ...process.env, ONTOLOGY_USER_DATA: userData, NODE_ENV: 'production' }, stdio: 'ignore' });
   const exited = new Promise<number | null>((res) => second.once('exit', res));
   await expect(name).toHaveValue('sales', { timeout: 20_000 });
   expect(await Promise.race([exited, new Promise<string>((res) => setTimeout(() => res('still running'), 15_000))])).not.toBe('still running');

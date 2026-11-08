@@ -1,9 +1,9 @@
 {
-  "name": "facet-bi",
+  "name": "super-ontology",
   "version": "0.1.0",
   "description": "Free, open-source desktop app for exploring local data and building interactive dashboards.",
   "main": "out/main/index.js",
-  "author": "Facet BI contributors",
+  "author": "Super Ontology contributors",
   "license": "MIT",
   "private": true,
   "type": "commonjs",

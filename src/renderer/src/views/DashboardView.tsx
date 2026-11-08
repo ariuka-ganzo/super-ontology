@@ -80,7 +80,7 @@ function DashboardEditor({ dash }: { dash: Dashboard }): React.JSX.Element {
 
   const exportPdf = async (): Promise<void> => {
     try {
-      const path = await window.facet.exportPdf(`${dash.name} - ${page.name}`);
+      const path = await window.ontology.exportPdf(`${dash.name} - ${page.name}`);
       if (path) toast('info', `Saved ${path}`);
     } catch (e) {
       toast('error', (e as Error).message);

@@ -148,12 +148,12 @@ function Worksheet(): React.JSX.Element {
   const exportPng = async (): Promise<void> => {
     const png = chartRef.current?.toPng();
     if (!png) return toast('info', 'PNG export works for charts. Use Export CSV for tables and KPI cards.');
-    const path = await window.facet.exportPng(png, ws.name);
+    const path = await window.ontology.exportPng(png, ws.name);
     if (path) toast('info', `Saved ${path}`);
   };
   const exportCsv = async (): Promise<void> => {
     try {
-      const path = await window.facet.exportCsv({ requestId: newId('x'), model, spec }, ws.name);
+      const path = await window.ontology.exportCsv({ requestId: newId('x'), model, spec }, ws.name);
       if (path) toast('info', `Saved ${path}`);
     } catch (e) {
       toast('error', (e as Error).message);

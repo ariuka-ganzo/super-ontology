@@ -153,7 +153,7 @@ export const useStore = create<State>((set, get) => ({
   },
   setTheme(theme) {
     try {
-      localStorage.setItem('facet-theme', theme);
+      localStorage.setItem('ontology-theme', theme);
     } catch {
       // Storage can be unavailable; the theme still applies for this session.
     }
@@ -184,7 +184,7 @@ export const useStore = create<State>((set, get) => ({
 
 function initialTheme(): ThemeName {
   try {
-    const t = localStorage.getItem('facet-theme');
+    const t = localStorage.getItem('ontology-theme');
     if (t === 'light' || t === 'dark') return t;
   } catch {
     // Fall through to the system preference.

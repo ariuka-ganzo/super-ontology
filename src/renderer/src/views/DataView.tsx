@@ -113,7 +113,7 @@ function TableData({ table }: { table: TableDef }): React.JSX.Element {
   useEffect(() => {
     if (error) return;
     let alive = true;
-    window.facet
+    window.ontology
       .preview(table, limit, 0)
       .then((p) => alive && (setPreview(p), setFailed(null)))
       .catch((e: Error) => alive && setFailed(e.message));
@@ -215,7 +215,7 @@ function Profile({ table, column }: { table: TableDef; column: string }): React.
   const col = table.columns.find((c) => c.name === column);
   useEffect(() => {
     let alive = true;
-    window.facet
+    window.ontology
       .profile(table, column)
       .then((r) => alive && setP(r))
       .catch((e: Error) => alive && setErr(e.message));

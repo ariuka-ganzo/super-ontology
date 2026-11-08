@@ -18,7 +18,7 @@ export function ModelView(): React.JSX.Element {
 
   const addRelationship = async (s: Omit<Relationship, 'id' | 'cardinality'>): Promise<void> => {
     try {
-      const c = await window.facet.cardinality(model, s);
+      const c = await window.ontology.cardinality(model, s);
       update((p) => {
         p.model.relationships.push({ ...s, id: newId('r'), cardinality: c.cardinality });
       });

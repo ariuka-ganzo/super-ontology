@@ -1,7 +1,7 @@
 // The only bridge between the sandboxed renderer and the main process.
 // It exposes named functions; there is no generic invoke.
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
-import type { FacetApi, MenuAction } from '../shared/api';
+import type { OntologyApi, MenuAction } from '../shared/api';
 
 class IpcError extends Error {
   constructor(
@@ -19,7 +19,7 @@ async function call<T>(channel: string, payload?: unknown): Promise<T> {
   throw new IpcError(r.error, r.code);
 }
 
-const api: FacetApi = {
+const api: OntologyApi = {
   chooseDataFiles: () => call('data:choose'),
   pathForFile: (file) => webUtils.getPathForFile(file),
   sourceFromPath: (path) => call('data:source', path),
@@ -52,4 +52,4 @@ const api: FacetApi = {
   }
 };
 
-contextBridge.exposeInMainWorld('facet', api);
+contextBridge.exposeInMainWorld('ontology', api);

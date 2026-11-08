@@ -26,10 +26,10 @@ export async function importPaths(paths: string[]): Promise<void> {
   for (const path of paths) {
     s().setBusy(`Importing ${baseName(path)}…`);
     try {
-      const source = await window.facet.sourceFromPath(path);
+      const source = await window.ontology.sourceFromPath(path);
       const id = newId('t');
       const { sheets, ...src } = source;
-      const r = await window.facet.importTable(id, src);
+      const r = await window.ontology.importTable(id, src);
       const table: TableDef = {
         id,
         name: uniqueName(
@@ -57,7 +57,7 @@ export async function importPaths(paths: string[]): Promise<void> {
 
 export async function chooseAndImport(): Promise<void> {
   try {
-    const paths = await window.facet.chooseDataFiles();
+    const paths = await window.ontology.chooseDataFiles();
     if (paths.length) await importPaths(paths);
   } catch (e) {
     s().toast('error', errText(e));
@@ -72,10 +72,10 @@ export async function reloadTable(tableId: string, newPath?: string): Promise<vo
   try {
     let source = table.source;
     if (newPath) {
-      const { sheets: _sheets, ...src } = await window.facet.sourceFromPath(newPath);
+      const { sheets: _sheets, ...src } = await window.ontology.sourceFromPath(newPath);
       source = src;
     }
-    const r = await window.facet.importTable(tableId, source);
+    const r = await window.ontology.importTable(tableId, source);
     const before = new Set(table.columns.map((c) => c.name));
     const after = new Set(r.columns.map((c) => c.name));
     const added = [...after].filter((c) => !before.has(c));
@@ -108,7 +108,7 @@ export async function reloadTable(tableId: string, newPath?: string): Promise<vo
 }
 
 export async function locateTable(tableId: string): Promise<void> {
-  const paths = await window.facet.chooseDataFiles();
+  const paths = await window.ontology.chooseDataFiles();
   if (paths[0]) await reloadTable(tableId, paths[0]);
 }
 
@@ -118,7 +118,7 @@ export async function removeTable(tableId: string): Promise<void> {
     p.model.relationships = p.model.relationships.filter((r) => r.fromTable !== tableId && r.toTable !== tableId);
   });
   s().setTableError(tableId, null);
-  await window.facet.dropTable(tableId).catch(() => undefined);
+  await window.ontology.dropTable(tableId).catch(() => undefined);
 }
 
 function confirmDiscard(): boolean {
@@ -144,7 +144,7 @@ export async function openProject(path?: string): Promise<void> {
   if (!confirmDiscard()) return;
   s().setBusy('Opening project…');
   try {
-    const r = await window.facet.openProject(path);
+    const r = await window.ontology.openProject(path);
     if (r) applyOpened(r);
   } catch (e) {
     s().toast('error', errText(e));
@@ -157,7 +157,7 @@ export async function openSample(skipConfirm = false): Promise<void> {
   if (!skipConfirm && !confirmDiscard()) return;
   s().setBusy('Opening sample project…');
   try {
-    applyOpened(await window.facet.openSample());
+    applyOpened(await window.ontology.openSample());
   } catch (e) {
     s().toast('error', errText(e));
   } finally {
@@ -175,7 +175,7 @@ export function newProjectAction(): void {
 
 export async function saveProject(saveAs = false): Promise<void> {
   try {
-    const path = await window.facet.saveProject(s().project, s().path, saveAs);
+    const path = await window.ontology.saveProject(s().project, s().path, saveAs);
     if (path) {
       s().markSaved(path);
       s().toast('info', `Saved ${path}`);
