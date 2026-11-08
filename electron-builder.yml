@@ -39,8 +39,11 @@ nsis:
   allowToChangeInstallationDirectory: true
   deleteAppDataOnUninstall: false
 mac:
+  # Apple silicon and Intel. The build machine is Apple silicon, so CI first adds DuckDB's Intel
+  # binding with scripts/add-duckdb-binding.mjs.
   target:
     - target: dmg
+      arch: [arm64, x64]
   category: public.app-category.business
   # Unsigned in v0.1. See the README for the Gatekeeper warning.
   identity: null

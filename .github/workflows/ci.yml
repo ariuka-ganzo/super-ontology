@@ -75,6 +75,9 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Add DuckDB's Intel binding for the Intel Mac build
+        if: runner.os == 'macOS'
+        run: node scripts/add-duckdb-binding.mjs darwin-x64
       - run: npm run build
       # Builds the installer (NSIS, dmg or AppImage) as well as the unpacked app it is made from,
       # so installer configuration is checked on every pull request, not only at release time.
@@ -99,10 +102,17 @@ jobs:
       - name: Smoke test (macOS)
         if: runner.os == 'macOS'
         run: |
-          exe="$(ls -d release/mac*/Super\ Ontology.app)/Contents/MacOS/Super Ontology"
+          exe="$PWD/release/mac-arm64/Super Ontology.app/Contents/MacOS/Super Ontology"
           ONTOLOGY_SMOKE_OUT="$RUNNER_TEMP/smoke.txt" ONTOLOGY_USER_DATA="$RUNNER_TEMP/userdata" "$exe" --smoke-test
           cat "$RUNNER_TEMP/smoke.txt"
           grep -q ONTOLOGY_SMOKE_OK "$RUNNER_TEMP/smoke.txt"
+          # The Intel app, run under Rosetta 2.
+          x64="$PWD/release/mac/Super Ontology.app/Contents/MacOS/Super Ontology"
+          file "$x64" | grep -q x86_64
+          ONTOLOGY_SMOKE_OUT="$RUNNER_TEMP/smoke-x64.txt" ONTOLOGY_USER_DATA="$RUNNER_TEMP/userdata-x64" arch -x86_64 "$x64" --smoke-test
+          cat "$RUNNER_TEMP/smoke-x64.txt"
+          grep -q ONTOLOGY_SMOKE_OK "$RUNNER_TEMP/smoke-x64.txt"
+          ls release/*.dmg
           find release -path "*app.asar.unpacked*" -name "*.node"
           echo "ONTOLOGY_E2E_EXECUTABLE=$exe" >> "$GITHUB_ENV"
 

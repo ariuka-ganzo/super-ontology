@@ -3,6 +3,7 @@ import type { MenuAction } from '@shared/api';
 import { chooseAndImport, importPaths, newProjectAction, openProject, openSample, saveProject } from './actions';
 import { MenuItem, Popover } from './components/Popover';
 import { Modal } from './components/Modal';
+import { SheetPicker } from './components/SheetPicker';
 import { newId } from './ids';
 import { newDashboard, newWorksheet, useStore, type View } from './store';
 import { DashboardView } from './views/DashboardView';
@@ -137,6 +138,7 @@ export function App(): React.JSX.Element {
           </div>
         ))}
       </div>
+      <SheetPicker />
       {about && (
         <Modal title="About Super Ontology" onClose={() => setAbout(false)}>
           <div className="col">
