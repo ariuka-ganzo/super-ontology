@@ -3,8 +3,9 @@ import { promises as fs } from 'node:fs';
 import { basename, extname, isAbsolute, join } from 'node:path';
 import { z } from 'zod';
 import type { OpenProjectResult } from '@shared/api';
-import { modelSchema, projectSchema, queryRequestSchema, relationshipSchema, sourceSchema, tableSchema } from '@shared/schema';
-import type { Project, SourceFormat, TableSource } from '@shared/types';
+import { appendSources } from '@shared/prep/prep';
+import { modelSchema, prepStepSchema, projectSchema, queryRequestSchema, relationshipSchema, sourceSchema, tableSchema } from '@shared/schema';
+import type { Project, SourceFormat, TableDef, TableSource } from '@shared/types';
 import { Engine, EngineError } from './engine/engine';
 import { excelSheets } from './engine/excel';
 import { loadProject, ProjectError, saveProject } from './project/project';
@@ -115,12 +116,17 @@ export function registerIpc(engine: Engine, getWindow: () => BrowserWindow | nul
     return source;
   });
 
-  h('data:import', z.object({ tableId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/), source: sourceSchema.extend({ path: absPath }) }), ({ tableId, source }) =>
-    engine.importTable(tableId, source)
+  const tableId = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
+  const steps = z.array(prepStepSchema).max(500);
+  h('data:import', z.object({ tableId, source: sourceSchema.extend({ path: absPath }), steps: steps.optional() }), ({ tableId, source, steps }) =>
+    engine.importTable(tableId, source, steps)
   );
-  h('data:drop', z.string().regex(/^[A-Za-z0-9_-]{1,64}$/), (id) => engine.dropTable(id));
-  h('data:preview', z.object({ table: tableSchema, limit: z.number().int().min(1).max(1000), offset: z.number().int().min(0) }), ({ table, limit, offset }) =>
-    engine.preview(table, limit, offset)
+  h('data:steps', z.object({ tableId, steps }), ({ tableId, steps }) => engine.applySteps(tableId, steps));
+  h('data:drop', tableId, (id) => engine.dropTable(id));
+  h(
+    'data:preview',
+    z.object({ table: tableSchema, limit: z.number().int().min(1).max(1000), offset: z.number().int().min(0), uptoStep: z.string().max(64).optional() }),
+    ({ table, limit, offset, uptoStep }) => engine.preview(table, limit, offset, uptoStep)
   );
   h('data:profile', z.object({ table: tableSchema, column: z.string().max(512) }), ({ table, column }) => engine.profile(table, column));
   h('data:cardinality', z.object({ model: modelSchema, rel: relationshipSchema.omit({ id: true, cardinality: true }) }), ({ model, rel }) =>
@@ -134,9 +140,17 @@ export function registerIpc(engine: Engine, getWindow: () => BrowserWindow | nul
     const project = await loadProject(path);
     const tableErrors: OpenProjectResult['tableErrors'] = [];
     const changed: OpenProjectResult['changed'] = [];
-    for (const t of project.model.tables) {
+    const stepErrors: OpenProjectResult['stepErrors'] = [];
+    // Tables whose steps append other tables are loaded last, so the tables they read from are ready.
+    const appends = (t: TableDef): boolean => appendSources(t.steps).length > 0;
+    const ordered = [...project.model.tables.filter((t) => !appends(t)), ...project.model.tables.filter(appends)];
+    for (const t of ordered) {
       try {
-        const r = await engine.importTable(t.id, t.source);
+        const r = await engine.importTable(t.id, t.source, t.steps);
+        if (r.stepError) {
+          const i = (t.steps ?? []).findIndex((s) => s.id === r.stepError?.stepId);
+          stepErrors.push({ tableId: t.id, stepId: r.stepError.stepId, message: `${t.name}, step ${i + 1}: ${r.stepError.message}` });
+        }
         const before = new Set(t.columns.map((c) => c.name));
         const after = new Set(r.columns.map((c) => c.name));
         const added = [...after].filter((c) => !before.has(c));
@@ -152,7 +166,7 @@ export function registerIpc(engine: Engine, getWindow: () => BrowserWindow | nul
         tableErrors.push({ tableId: t.id, message: (e as Error).message });
       }
     }
-    return { project, path: asPath, tableErrors, changed };
+    return { project, path: asPath, tableErrors, changed, stepErrors };
   };
 
   h('project:open', absPath.optional(), async (path) => {

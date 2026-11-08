@@ -36,7 +36,33 @@ export interface TableDef {
   rowCount: number;
   /** Data source filters, applied before anything else. */
   filters?: FilterDef[];
+  /** Cleaning steps, applied in order to the imported data. `columns` describes the result. */
+  steps?: PrepStep[];
 }
+
+export type PrepFilterOp = '=' | '!=' | '>' | '>=' | '<' | '<=' | 'contains' | 'notContains' | 'startsWith' | 'blank' | 'notBlank';
+
+/**
+ * One data cleaning step. Column names refer to the columns as they are after the previous steps.
+ * Steps are compiled to SQL in src/shared/prep/prep.ts.
+ */
+export type PrepStep =
+  | { id: string; kind: 'rename'; column: string; to: string }
+  | { id: string; kind: 'remove'; columns: string[] }
+  | { id: string; kind: 'keep'; columns: string[] }
+  | { id: string; kind: 'changeType'; column: string; to: DataType }
+  | { id: string; kind: 'filter'; column: string; op: PrepFilterOp; value?: Scalar }
+  | { id: string; kind: 'replace'; column: string; find: string; with: string; whole?: boolean }
+  | { id: string; kind: 'text'; column: string; op: 'trim' | 'upper' | 'lower' }
+  | { id: string; kind: 'fillBlank'; column: string; value: Scalar }
+  | { id: string; kind: 'split'; column: string; separator: string; into: string[] }
+  | { id: string; kind: 'merge'; columns: string[]; separator: string; to: string }
+  | { id: string; kind: 'dedupe'; columns?: string[] }
+  | { id: string; kind: 'removeBlankRows' }
+  | { id: string; kind: 'keepTop'; n: number }
+  | { id: string; kind: 'append'; tableId: string };
+
+export type PrepStepKind = PrepStep['kind'];
 
 /** Cardinality seen from the `from` side: many-to-one means many `from` rows match one `to` row. */
 export type Cardinality = 'one-to-one' | 'one-to-many' | 'many-to-one' | 'many-to-many';
@@ -183,7 +209,11 @@ export interface Dashboard {
 
 export type ThemeName = 'light' | 'dark';
 
-export const FORMAT_VERSION = 1;
+/**
+ * Project file format. 2 added data cleaning steps (TableDef.steps); version 1 files open unchanged.
+ * Older app versions refuse newer files instead of silently ignoring what they do not understand.
+ */
+export const FORMAT_VERSION = 2;
 
 export interface Project {
   formatVersion: number;

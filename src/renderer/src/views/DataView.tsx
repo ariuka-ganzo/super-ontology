@@ -3,6 +3,7 @@ import type { ColumnProfile, PreviewResult } from '@shared/api';
 import { formatValue } from '@shared/format';
 import type { DataType, TableDef } from '@shared/types';
 import { chooseAndImport, locateTable, openSample, reloadTable, removeTable } from '../actions';
+import { StepsPanel } from '../components/StepsPanel';
 import { clearQueryCache } from '../query';
 import { useStore } from '../store';
 
@@ -108,20 +109,26 @@ function TableData({ table }: { table: TableDef }): React.JSX.Element {
   const [failed, setFailed] = useState<string | null>(null);
   const [limit, setLimit] = useState(PAGE);
   const [column, setColumn] = useState<string | null>(table.columns[0]?.name ?? null);
-  const typesKey = JSON.stringify(table.columns.map((c) => [c.name, c.override ?? null])) + table.rowCount;
+  // The cleaning step whose result the grid shows; null shows the result of every step.
+  const [upto, setUpto] = useState<string | null>(null);
+  const steps = table.steps ?? [];
+  const uptoIndex = upto ? steps.findIndex((s) => s.id === upto) : -1;
+  const atStep = uptoIndex >= 0 && uptoIndex < steps.length - 1;
+  const dataVersion = useStore((s) => s.dataVersion);
+  const typesKey = JSON.stringify(table.columns.map((c) => [c.name, c.override ?? null])) + table.rowCount + JSON.stringify(steps) + dataVersion;
 
   useEffect(() => {
     if (error) return;
     let alive = true;
     window.ontology
-      .preview(table, limit, 0)
+      .preview(table, limit, 0, atStep ? (upto ?? undefined) : undefined)
       .then((p) => alive && (setPreview(p), setFailed(null)))
       .catch((e: Error) => alive && setFailed(e.message));
     return () => {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [typesKey, limit, error]);
+  }, [typesKey, limit, error, upto]);
 
   if (error)
     return (
@@ -150,40 +157,56 @@ function TableData({ table }: { table: TableDef }): React.JSX.Element {
 
   return (
     <div className="data-layout view-body">
+      <StepsPanel table={table} selected={atStep ? upto : null} onSelect={setUpto} column={column} />
       <div className="grid-wrap">
         {failed && <div className="banner error">{failed}</div>}
+        {atStep && (
+          <div className="banner" data-testid="step-preview">
+            Showing the data after step {uptoIndex + 1} of {steps.length}.{' '}
+            <button className="small" onClick={() => setUpto(null)}>
+              Show the result
+            </button>
+          </div>
+        )}
         <table className="grid" data-testid="data-grid">
           <thead>
             <tr>
-              {table.columns.map((c) => (
-                <th key={c.name} className={column === c.name ? 'selected' : ''} onClick={() => setColumn(c.name)}>
-                  <div className="row" style={{ gap: 4 }}>
-                    <span>{c.name}</span>
-                    <select
-                      aria-label={`Type of ${c.name}`}
-                      value={c.override ?? c.type}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => setOverride(c.name, e.target.value as DataType)}
-                      style={{ fontSize: 11, padding: '0 2px' }}
-                    >
-                      {TYPES.map((t) => (
-                        <option key={t.value} value={t.value}>
-                          {t.label}
-                          {t.value === c.type && c.override ? ' (detected)' : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </th>
-              ))}
+              {atStep &&
+                preview?.columns.map((name) => (
+                  <th key={name}>
+                    <span>{name}</span>
+                  </th>
+                ))}
+              {!atStep &&
+                table.columns.map((c) => (
+                  <th key={c.name} className={column === c.name ? 'selected' : ''} onClick={() => setColumn(c.name)}>
+                    <div className="row" style={{ gap: 4 }}>
+                      <span>{c.name}</span>
+                      <select
+                        aria-label={`Type of ${c.name}`}
+                        value={c.override ?? c.type}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setOverride(c.name, e.target.value as DataType)}
+                        style={{ fontSize: 11, padding: '0 2px' }}
+                      >
+                        {TYPES.map((t) => (
+                          <option key={t.value} value={t.value}>
+                            {t.label}
+                            {t.value === c.type && c.override ? ' (detected)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </th>
+                ))}
             </tr>
           </thead>
           <tbody>
             {preview?.rows.map((r, i) => (
               <tr key={i}>
                 {r.map((v, j) => {
-                  const col = table.columns[j];
-                  const t = col ? (col.override ?? col.type) : 'string';
+                  const col = atStep ? undefined : table.columns[j];
+                  const t = col ? (col.override ?? col.type) : typeof v === 'number' ? 'number' : 'string';
                   const num = t === 'integer' || t === 'number';
                   return (
                     <td key={j} className={v === null ? 'null' : num ? 'num' : ''}>
@@ -204,7 +227,11 @@ function TableData({ table }: { table: TableDef }): React.JSX.Element {
           </div>
         )}
       </div>
-      {column && <Profile key={column + typesKey} table={table} column={column} />}
+      {column && !atStep && table.columns.some((c) => c.name === column) ? (
+        <Profile key={column + typesKey} table={table} column={column} />
+      ) : (
+        <aside className="profile faint">{atStep ? 'Column profiles describe the result of every step.' : 'Click a column heading to see its profile.'}</aside>
+      )}
     </div>
   );
 }

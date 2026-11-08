@@ -50,13 +50,39 @@ export const sourceSchema = z.object({
   sheet: z.string().max(512).optional()
 });
 
+const columns = z.array(name).min(1).max(5000);
+
+export const prepStepSchema = z.discriminatedUnion('kind', [
+  z.object({ id, kind: z.literal('rename'), column: name, to: name }),
+  z.object({ id, kind: z.literal('remove'), columns }),
+  z.object({ id, kind: z.literal('keep'), columns }),
+  z.object({ id, kind: z.literal('changeType'), column: name, to: dataType }),
+  z.object({
+    id,
+    kind: z.literal('filter'),
+    column: name,
+    op: z.enum(['=', '!=', '>', '>=', '<', '<=', 'contains', 'notContains', 'startsWith', 'blank', 'notBlank']),
+    value: scalar.optional()
+  }),
+  z.object({ id, kind: z.literal('replace'), column: name, find: z.string().max(10_000), with: z.string().max(10_000), whole: z.boolean().optional() }),
+  z.object({ id, kind: z.literal('text'), column: name, op: z.enum(['trim', 'upper', 'lower']) }),
+  z.object({ id, kind: z.literal('fillBlank'), column: name, value: scalar }),
+  z.object({ id, kind: z.literal('split'), column: name, separator: z.string().min(1).max(100), into: z.array(name).min(2).max(50) }),
+  z.object({ id, kind: z.literal('merge'), columns, separator: z.string().max(100), to: name }),
+  z.object({ id, kind: z.literal('dedupe'), columns: columns.optional() }),
+  z.object({ id, kind: z.literal('removeBlankRows') }),
+  z.object({ id, kind: z.literal('keepTop'), n: z.number().int().min(1).max(1_000_000_000) }),
+  z.object({ id, kind: z.literal('append'), tableId: id })
+]);
+
 export const tableSchema = z.object({
   id,
   name,
   source: sourceSchema,
   columns: z.array(columnSchema).max(5000),
   rowCount: z.number().int().min(0),
-  filters: z.array(filterSchema).max(200).optional()
+  filters: z.array(filterSchema).max(200).optional(),
+  steps: z.array(prepStepSchema).max(500).optional()
 });
 
 export const relationshipSchema = z.object({

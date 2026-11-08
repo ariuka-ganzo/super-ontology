@@ -9,6 +9,7 @@ A free, open-source desktop app for exploring local data and building interactiv
 ## What it does
 
 - **Import local files.** CSV, TSV, Parquet, JSON and Excel (.xlsx), by file dialog or by dragging files onto the window. For a workbook with several sheets, choose which sheets to import; each becomes a table. Preview the rows, change any column's detected type, and see a profile of each column: nulls, distinct values, min and max, and a histogram. Reload a table from its file; if the file is missing or its columns changed, you get a clear message and a "Locate file" button.
+- **Clean data with steps.** Rename, remove, keep or retype columns; filter rows; replace values; trim or change case; fill blanks; split and merge columns; remove duplicates and blank rows; keep the first rows; and append one table below another. Steps run in order, each shows the data as it was right after it, and they are saved in the project and re-run when the file is reloaded. The file itself is never changed.
 - **Model several tables.** Relationships are suggested from matching column names and types. Cardinality (one-to-many and so on) is detected from the data, and you are warned when a many-to-many relationship would multiply rows and inflate totals.
 - **Build views by dragging fields** onto Columns, Rows, Color, Size, Label, Tooltip and Filters. Chart types: bar, stacked bar, line, area, scatter, pie, donut, heatmap, table, pivot table and KPI card. The app recommends a chart for the fields you picked. Date drill levels (year, quarter, month, week, day), sorting, Top N filters, number formats, and undo and redo.
 - **Write formulas** in a readable language with aggregates, logic, text, date and maths functions, level of detail expressions (`FIXED`, `INCLUDE`, `EXCLUDE`) and table calculations (`RUNNING_SUM`, `PERCENT_OF_TOTAL`, `RANK`, `LAG`). Errors show the line, column and a plain-language explanation.
@@ -135,6 +136,7 @@ Super Ontology is an Electron app. The renderer (React and TypeScript) is sandbo
 
 The core is a compiler, in `src/shared/compiler`, that turns a view (the fields on each shelf, plus filters) into one SQL statement. It applies steps in this order:
 
+0. Each table's cleaning steps, run once when the table is loaded or the steps change, not on every query
 1. Data source filters
 2. Joins from model relationships, including only the tables the view needs
 3. Context filters
@@ -188,7 +190,8 @@ A saved calculation is a **calculated column** when it works row by row, or a **
 - **Table calculations** in one view all run along the same dimension.
 - **Filters on table calculations** are not supported.
 - **Accessibility:** keyboard navigation works for menus, dialogs and forms, but charts and drag and drop need a mouse.
-- Not in v0.1: live database connections, data preparation steps, maps, importing other tools' files, sharing or a server, row-level security, and AI features. See [docs/RESEARCH.md](docs/RESEARCH.md) for what is planned.
+- **Cleaning steps** cannot be edited once added; remove the step and add it again. A table with steps keeps a second copy of its data in memory.
+- Not in v0.1: live database connections, maps, importing other tools' files, sharing or a server, row-level security, and AI features. See [docs/RESEARCH.md](docs/RESEARCH.md) for what is planned.
 
 ## Licence
 

@@ -219,7 +219,9 @@ describe('queries', () => {
     };
     // A deliberately heavy query: a FIXED expression over a cross join is not possible from the
     // UI, so make the engine table itself big instead.
-    await engine.unsafeRawForTests('CREATE OR REPLACE TABLE t_big AS SELECT range AS id FROM range(300000000)');
+    // A table with no cleaning steps is a view of its raw data, so replace the view.
+    await engine.unsafeRawForTests('DROP VIEW t_big');
+    await engine.unsafeRawForTests('CREATE TABLE t_big AS SELECT range AS id FROM range(300000000)');
     const request: QueryRequest = {
       requestId: 'slow1',
       model: m,
