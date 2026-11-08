@@ -44,10 +44,25 @@ export const columnSchema = z.object({
   override: dataType.optional()
 });
 
+export const connectionSchema = z.object({
+  id,
+  host: z
+    .string()
+    .min(1)
+    .max(255)
+    .regex(/^[^\s'"\\]+$/, 'Host names cannot contain spaces or quotes'),
+  port: z.number().int().min(1).max(65535),
+  database: z.string().min(1).max(255),
+  user: z.string().min(1).max(255)
+});
+
 export const sourceSchema = z.object({
   path: z.string().min(1).max(4096),
-  format: z.enum(['csv', 'tsv', 'parquet', 'json', 'excel']),
-  sheet: z.string().max(512).optional()
+  format: z.enum(['csv', 'tsv', 'parquet', 'json', 'excel', 'sqlite', 'postgres', 'mysql']),
+  sheet: z.string().max(512).optional(),
+  table: z.object({ schema: z.string().max(255).optional(), name: z.string().min(1).max(255) }).optional(),
+  query: z.string().max(100_000).optional(),
+  connection: connectionSchema.optional()
 });
 
 const columns = z.array(name).min(1).max(5000);

@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { projectSchema } from '@shared/schema';
-import { FORMAT_VERSION, type Project } from '@shared/types';
+import { FORMAT_VERSION, isServerFormat, type Project } from '@shared/types';
 
 export class ProjectError extends Error {
   constructor(
@@ -30,7 +30,7 @@ export function toAbsolutePath(projectFile: string, stored: string): string {
 export function serializeProject(project: Project, projectFile: string): string {
   const copy: Project = structuredClone(project);
   copy.formatVersion = FORMAT_VERSION;
-  for (const t of copy.model.tables) t.source.path = toStoredPath(projectFile, t.source.path);
+  for (const t of copy.model.tables) if (!isServerFormat(t.source.format)) t.source.path = toStoredPath(projectFile, t.source.path);
   return JSON.stringify(copy, null, 2) + '\n';
 }
 
@@ -89,6 +89,6 @@ export async function loadProject(path: string): Promise<Project> {
     throw new ProjectError(`${path} is not a valid Super Ontology project: ${issue?.path.join('.')} ${issue?.message}`);
   }
   const project = parsed.data as Project;
-  for (const t of project.model.tables) t.source.path = toAbsolutePath(path, t.source.path);
+  for (const t of project.model.tables) if (!isServerFormat(t.source.format)) t.source.path = toAbsolutePath(path, t.source.path);
   return project;
 }

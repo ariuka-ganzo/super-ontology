@@ -1,6 +1,6 @@
 # Super Ontology
 
-A free, open-source desktop app for exploring local data and building interactive dashboards. It gives you the drag-and-drop workflow of commercial BI tools without a licence or a cloud account. Your data stays on your computer: Super Ontology makes no network requests and has no telemetry.
+A free, open-source desktop app for exploring local data and building interactive dashboards. It gives you the drag-and-drop workflow of commercial BI tools without a licence or a cloud account. Your data stays on your computer: Super Ontology has no telemetry, and the only network connections it makes are to database servers you add yourself.
 
 **Status: v0.1, early.** It works end to end and is tested on Windows, macOS and Linux, but expect rough edges. Installers are not code-signed yet.
 
@@ -8,6 +8,7 @@ A free, open-source desktop app for exploring local data and building interactiv
 
 ## What it does
 
+- **Import from databases.** Copy tables in from SQLite files, or from PostgreSQL and MySQL servers (a whole table or the result of a query you write). **Reload** fetches the latest data. Connections are read-only, and saved passwords are encrypted by your operating system and never stored in the project file.
 - **Import local files.** CSV, TSV, Parquet, JSON and Excel (.xlsx), by file dialog or by dragging files onto the window. For a workbook with several sheets, choose which sheets to import; each becomes a table. Preview the rows, change any column's detected type, and see a profile of each column: nulls, distinct values, min and max, and a histogram. Reload a table from its file; if the file is missing or its columns changed, you get a clear message and a "Locate file" button.
 - **Clean data with steps.** Rename, remove, keep or retype columns; filter rows; replace values; trim or change case; fill blanks; split and merge columns; remove duplicates and blank rows; keep the first rows; and append one table below another. Steps run in order, each shows the data as it was right after it, and they are saved in the project and re-run when the file is reloaded. The file itself is never changed.
 - **Model several tables.** Relationships are suggested from matching column names and types. Cardinality (one-to-many and so on) is detected from the data, and you are warned when a many-to-many relationship would multiply rows and inflate totals.
@@ -55,6 +56,12 @@ cd super-ontology
 
 ```bash
 npm ci
+```
+
+Download DuckDB's database connectors for your platform (about 80 MB; needed for SQLite, PostgreSQL and MySQL imports and their tests):
+
+```bash
+node scripts/fetch-duckdb-extensions.mjs
 ```
 
 Run the app in development mode with hot reload:
@@ -174,7 +181,9 @@ A saved calculation is a **calculated column** when it works row by row, or a **
 
 ## Privacy and security
 
-- No network access: the app blocks every web request that is not one of its own files, and it has no telemetry or update checks.
+- No telemetry or update checks. The window blocks every web request that is not one of the app's own files. The only network connections are to PostgreSQL or MySQL servers you add, made by DuckDB in the main process.
+- Database connections use DuckDB's official connectors, which ship inside the installer (they are never downloaded at run time) and whose signatures DuckDB checks when loading them. They run in a separate DuckDB instance that only runs fixed statements, and every database is attached read-only. A query you type runs on your server as a bound parameter.
+- Database passwords are saved only if you tick "Remember the password", encrypted with Electron `safeStorage` (Windows DPAPI, macOS Keychain or the Linux Secret Service) in the app's settings folder. They are never written to project files or included in error messages. On Linux without a keyring, passwords are not saved.
 - The renderer runs with `contextIsolation`, `sandbox` and no Node integration, under a strict Content Security Policy. The preload script exposes named functions only, and the main process validates every message with a schema and checks that it came from the app's window.
 - The renderer never sends SQL. It sends a description of the view, and the main process compiles it. Every identifier is quoted and every value is a bound parameter; formula text only reaches SQL through the parser.
 - DuckDB runs as two instances. The one that runs queries has file access disabled and its configuration locked, so it cannot read or write files or install extensions. A second instance only runs fixed import statements, with the path of a file you chose bound as a parameter, and only for data file extensions (`.csv`, `.tsv`, `.parquet`, `.json`, `.xlsx` and similar), even when the path comes from a project file. DuckDB extensions are never downloaded.
@@ -191,7 +200,8 @@ A saved calculation is a **calculated column** when it works row by row, or a **
 - **Filters on table calculations** are not supported.
 - **Accessibility:** keyboard navigation works for menus, dialogs and forms, but charts and drag and drop need a mouse.
 - **Cleaning steps** cannot be edited once added; remove the step and add it again. A table with steps keeps a second copy of its data in memory.
-- Not in v0.1: live database connections, maps, importing other tools' files, sharing or a server, row-level security, and AI features. See [docs/RESEARCH.md](docs/RESEARCH.md) for what is planned.
+- **Databases:** data is copied in when you import or press Reload, not queried live. PostgreSQL, MySQL and SQLite only (no SQL Server yet). Use an account that can only read.
+- Not yet: live database queries, SQL Server, maps, importing other tools' files, sharing or a server, row-level security, and AI features. See [docs/RESEARCH.md](docs/RESEARCH.md) for what is planned.
 
 ## Licence
 

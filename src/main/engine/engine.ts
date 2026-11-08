@@ -19,7 +19,20 @@ import { compileViz, type CompiledQuery } from '@shared/compiler/compile';
 import { duckTypeToDataType, engineTableName, quoteIdent as q, sqlType } from '@shared/compiler/sql';
 import { classifyCardinality } from '@shared/model/relationships';
 import { appendSources, compilePrep, type PrepColumn, type PrepSource } from '@shared/prep/prep';
-import type { ColumnDef, DataType, Model, PrepStep, QueryResult, Relationship, Scalar, TableDef, TableSource } from '@shared/types';
+import {
+  isServerFormat,
+  type ColumnDef,
+  type DataType,
+  type FileFormat,
+  type Model,
+  type PrepStep,
+  type QueryResult,
+  type Relationship,
+  type Scalar,
+  type TableDef,
+  type TableSource
+} from '@shared/types';
+import { Connector, ConnectorError, isScalarType, type DbTable } from './connector';
 import { readExcelToCsv } from './excel';
 import { toScalar } from './values';
 
@@ -29,19 +42,20 @@ const LOCKED = {
   allow_community_extensions: 'false'
 };
 
-/** File extensions the engine will read for each format. Anything else is refused. */
-export const FORMAT_EXTENSIONS: Record<TableSource['format'], string[]> = {
+/** File extensions the engine will read for each file format. Anything else is refused. */
+export const FORMAT_EXTENSIONS: Record<FileFormat, string[]> = {
   csv: ['.csv', '.txt'],
   tsv: ['.tsv', '.tab', '.txt'],
   parquet: ['.parquet', '.pq'],
   json: ['.json', '.jsonl', '.ndjson'],
-  excel: ['.xlsx']
+  excel: ['.xlsx'],
+  sqlite: ['.db', '.sqlite', '.sqlite3', '.db3']
 };
 
 export class EngineError extends Error {
   constructor(
     message: string,
-    public readonly code: 'missing' | 'cancelled' | 'invalid' | 'failed' = 'failed'
+    public readonly code: 'missing' | 'cancelled' | 'invalid' | 'failed' | 'password' | 'unavailable' = 'failed'
   ) {
     super(message);
     this.name = 'EngineError';
@@ -54,17 +68,29 @@ export class Engine {
 
   private constructor(
     private readonly query_: DuckDBInstance,
-    private readonly reader: DuckDBInstance
+    private readonly reader: DuckDBInstance,
+    readonly connector: Connector
   ) {}
 
-  static async create(): Promise<Engine> {
+  /** `extensionsDir` holds DuckDB's database connectors; without them, database imports report that they are unavailable. */
+  static async create(opts: { extensionsDir?: string } = {}): Promise<Engine> {
     const query = await DuckDBInstance.create(':memory:', { ...LOCKED, enable_external_access: 'false' });
     const reader = await DuckDBInstance.create(':memory:', LOCKED);
     // Lock the query instance's configuration so later SQL cannot turn file access back on.
     const c = await query.connect();
     await c.run('SET lock_configuration = true');
     c.closeSync();
-    return new Engine(query, reader);
+    return new Engine(query, reader, new Connector(opts.extensionsDir ?? ''));
+  }
+
+  /** The tables in a database. Servers need the password. */
+  async listDbTables(source: TableSource, password?: string): Promise<DbTable[]> {
+    if (source.format === 'sqlite') await checkFile(source);
+    try {
+      return await this.connector.listTables(source, password);
+    } catch (e) {
+      throw asEngineError(e);
+    }
   }
 
   private async withQuery<T>(fn: (c: DuckDBConnection) => Promise<T>): Promise<T> {
@@ -82,22 +108,23 @@ export class Engine {
    * Imports a file for `tableId`, replacing any previous data, then applies the table's cleaning steps.
    * The file's rows are kept unchanged in a raw table, so steps can be edited without reading the file again.
    */
-  async importTable(tableId: string, source: TableSource, steps: PrepStep[] = []): Promise<ImportResult> {
+  async importTable(tableId: string, source: TableSource, steps: PrepStep[] = [], password?: string): Promise<ImportResult> {
     const started = Date.now();
-    // Only data files can be imported, whatever path reaches the engine (for example from a project file).
-    if (!FORMAT_EXTENSIONS[source.format]?.includes(extname(source.path).toLowerCase()))
-      throw new EngineError(`${source.path} does not look like a ${source.format.toUpperCase()} file, so it was not imported.`, 'invalid');
-    try {
-      const st = await fs.stat(source.path);
-      if (!st.isFile()) throw new EngineError(`${source.path} is not a file`, 'invalid');
-    } catch (e) {
-      if (e instanceof EngineError) throw e;
-      throw new EngineError(`The file ${source.path} was not found. It may have been moved, renamed or deleted.`, 'missing');
+    if (source.format === 'sqlite' || isServerFormat(source.format)) {
+      if (source.format === 'sqlite') await checkFile(source);
+      try {
+        await this.connector.read(source, password, (result) => this.copyInto(tableId, result));
+      } catch (e) {
+        throw asEngineError(e);
+      }
+      const prepared = await this.applySteps(tableId, steps);
+      return { ...prepared, elapsedMs: Date.now() - started };
     }
+    await checkFile(source);
 
     let tempDir: string | undefined;
     let path = source.path;
-    let format = source.format;
+    let format: FileFormat = source.format;
     if (format === 'excel') {
       tempDir = await fs.mkdtemp(join(tmpdir(), 'ontology-xlsx-'));
       path = join(tempDir, 'sheet.csv');
@@ -393,6 +420,26 @@ export class Engine {
   }
 }
 
+/** Only data files can be imported, whatever path reaches the engine (for example from a project file). */
+async function checkFile(source: TableSource): Promise<void> {
+  const allowed = isServerFormat(source.format) ? [] : FORMAT_EXTENSIONS[source.format];
+  if (!allowed.includes(extname(source.path).toLowerCase()))
+    throw new EngineError(`${source.path} does not look like a ${source.format.toUpperCase()} file, so it was not imported.`, 'invalid');
+  try {
+    const st = await fs.stat(source.path);
+    if (!st.isFile()) throw new EngineError(`${source.path} is not a file`, 'invalid');
+  } catch (e) {
+    if (e instanceof EngineError) throw e;
+    throw new EngineError(`The file ${source.path} was not found. It may have been moved, renamed or deleted.`, 'missing');
+  }
+}
+
+function asEngineError(e: unknown): EngineError {
+  if (e instanceof EngineError) return e;
+  if (e instanceof ConnectorError) return new EngineError(e.message, e.code);
+  return new EngineError(cleanMessage(e));
+}
+
 /** The unchanged rows of the file a table was imported from. Views never read it directly. */
 function rawTableName(tableId: string): string {
   return `${engineTableName(tableId)}__raw`;
@@ -428,11 +475,6 @@ function readerSql(format: TableSource['format']): string {
     default:
       throw new EngineError(`Unsupported format ${format}`, 'invalid');
   }
-}
-
-function isScalarType(t: string): boolean {
-  const u = t.toUpperCase();
-  return !(u.includes('STRUCT') || u.includes('[]') || u.startsWith('MAP') || u.startsWith('UNION') || u === 'JSON' || u.startsWith('LIST') || u === 'BLOB');
 }
 
 /** SELECT over an engine table with type overrides applied. */
