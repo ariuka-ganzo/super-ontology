@@ -8,7 +8,7 @@ A free, open-source desktop app for exploring local data and building interactiv
 
 ## What it does
 
-- **Import local files.** CSV, TSV, Parquet, JSON and Excel (.xlsx), by file dialog or by dragging files onto the window. Preview the rows, change any column's detected type, and see a profile of each column: nulls, distinct values, min and max, and a histogram. Reload a table from its file; if the file is missing or its columns changed, you get a clear message and a "Locate file" button.
+- **Import local files.** CSV, TSV, Parquet, JSON and Excel (.xlsx), by file dialog or by dragging files onto the window. For a workbook with several sheets, choose which sheets to import; each becomes a table. Preview the rows, change any column's detected type, and see a profile of each column: nulls, distinct values, min and max, and a histogram. Reload a table from its file; if the file is missing or its columns changed, you get a clear message and a "Locate file" button.
 - **Model several tables.** Relationships are suggested from matching column names and types. Cardinality (one-to-many and so on) is detected from the data, and you are warned when a many-to-many relationship would multiply rows and inflate totals.
 - **Build views by dragging fields** onto Columns, Rows, Color, Size, Label, Tooltip and Filters. Chart types: bar, stacked bar, line, area, scatter, pie, donut, heatmap, table, pivot table and KPI card. The app recommends a chart for the fields you picked. Date drill levels (year, quarter, month, week, day), sorting, Top N filters, number formats, and undo and redo.
 - **Write formulas** in a readable language with aggregates, logic, text, date and maths functions, level of detail expressions (`FIXED`, `INCLUDE`, `EXCLUDE`) and table calculations (`RUNNING_SUM`, `PERCENT_OF_TOTAL`, `RANK`, `LAG`). Errors show the line, column and a plain-language explanation.
@@ -181,7 +181,7 @@ A saved calculation is a **calculated column** when it works row by row, or a **
 ## Known limitations in v0.1
 
 - **Data is not embedded in projects.** A `.ontology` file stores paths to your data files (relative to the project where possible). Moving a project to another computer means moving the data too, then using **Locate file** if the paths differ.
-- **Excel:** `.xlsx` only (not the older `.xls`). Only the first sheet of a workbook is imported (there is no sheet picker yet), and its first row must be the header. Cells with formulas are read as their last saved values.
+- **Excel:** `.xlsx` only (not the older `.xls`). The first row of each sheet must be its header. Cells with formulas are read as their last saved values.
 - **Data is held in memory** while a project is open. Very large files (many gigabytes) may not fit.
 - **Charts** draw at most 10,000 rows. Larger results are cut off with a visible notice; CSV export always writes every row.
 - **Slicers** apply to every worksheet on their page that is related to the slicer's table. They do not filter each other's lists of values.

@@ -1,5 +1,6 @@
 import type { OpenProjectResult } from '@shared/api';
-import type { Project, TableDef } from '@shared/types';
+import type { Project, TableDef, TableSource } from '@shared/types';
+import { pickSheets } from './components/SheetPicker';
 import { newId } from './ids';
 import { clearQueryCache } from './query';
 import { newProject, useStore } from './store';
@@ -21,38 +22,72 @@ function uniqueName(name: string, taken: string[]): string {
   for (let i = 2; ; i++) if (!lower.has(`${name} ${i}`.toLowerCase())) return `${name} ${i}`;
 }
 
-/** Imports files into the project as new tables. */
+function fileName(path: string): string {
+  return path.split(/[\\/]/).pop() ?? path;
+}
+
+/** Imports one source as a new table. */
+async function importSource(src: TableSource, name: string): Promise<void> {
+  const id = newId('t');
+  const r = await window.ontology.importTable(id, src);
+  const table: TableDef = {
+    id,
+    name: uniqueName(
+      name,
+      s().project.model.tables.map((t) => t.name)
+    ),
+    source: src,
+    columns: r.columns,
+    rowCount: r.rowCount
+  };
+  s().update((p) => {
+    p.model.tables.push(table);
+    if (p.name === 'Untitled' && p.model.tables.length === 1) p.name = table.name;
+  });
+  s().selectTable(id);
+  s().go('data');
+  s().toast('info', `Imported ${table.name}: ${r.rowCount.toLocaleString('en-US')} rows in ${(r.elapsedMs / 1000).toFixed(2)} s`);
+}
+
+/** Imports files into the project as new tables. A workbook with several sheets asks which ones to import. */
 export async function importPaths(paths: string[]): Promise<void> {
   for (const path of paths) {
-    s().setBusy(`Importing ${baseName(path)}…`);
     try {
-      const source = await window.ontology.sourceFromPath(path);
-      const id = newId('t');
-      const { sheets, ...src } = source;
-      const r = await window.ontology.importTable(id, src);
-      const table: TableDef = {
-        id,
-        name: uniqueName(
-          baseName(path) + (src.format === 'excel' && sheets && sheets.length > 1 ? ` (${src.sheet})` : ''),
-          s().project.model.tables.map((t) => t.name)
-        ),
-        source: src,
-        columns: r.columns,
-        rowCount: r.rowCount
-      };
-      s().update((p) => {
-        p.model.tables.push(table);
-        if (p.name === 'Untitled' && p.model.tables.length === 1) p.name = table.name;
-      });
-      s().selectTable(id);
-      s().go('data');
-      s().toast('info', `Imported ${table.name}: ${r.rowCount.toLocaleString('en-US')} rows in ${(r.elapsedMs / 1000).toFixed(2)} s`);
+      const { sheets, ...src } = await window.ontology.sourceFromPath(path);
+      if (src.format === 'excel' && sheets && sheets.length > 1) {
+        const chosen = await pickSheets(fileName(path), sheets, true);
+        for (const sheet of chosen) {
+          s().setBusy(`Importing ${baseName(path)} (${sheet})…`);
+          try {
+            await importSource({ ...src, sheet }, `${baseName(path)} (${sheet})`);
+          } catch (e) {
+            s().toast('error', `Sheet ${sheet}: ${errText(e)}`);
+          } finally {
+            s().setBusy(null);
+          }
+        }
+        continue;
+      }
+      s().setBusy(`Importing ${baseName(path)}…`);
+      await importSource(src, baseName(path));
     } catch (e) {
       s().toast('error', errText(e));
     } finally {
       s().setBusy(null);
     }
   }
+}
+
+/**
+ * The source to use when a table is pointed at a different file. For a workbook, keeps the table's
+ * sheet when the new file has a sheet with that name, and otherwise asks. Null when cancelled.
+ */
+async function sourceForLocatedFile(table: TableDef, path: string): Promise<TableSource | null> {
+  const { sheets, ...src } = await window.ontology.sourceFromPath(path);
+  if (src.format !== 'excel' || !sheets || sheets.length < 2) return src;
+  if (table.source.sheet && sheets.includes(table.source.sheet)) return { ...src, sheet: table.source.sheet };
+  const [sheet] = await pickSheets(fileName(path), sheets, false);
+  return sheet ? { ...src, sheet } : null;
 }
 
 export async function chooseAndImport(): Promise<void> {
@@ -68,13 +103,14 @@ export async function chooseAndImport(): Promise<void> {
 export async function reloadTable(tableId: string, newPath?: string): Promise<void> {
   const table = s().project.model.tables.find((t) => t.id === tableId);
   if (!table) return;
-  s().setBusy(`Reloading ${table.name}…`);
   try {
     let source = table.source;
     if (newPath) {
-      const { sheets: _sheets, ...src } = await window.ontology.sourceFromPath(newPath);
-      source = src;
+      const located = await sourceForLocatedFile(table, newPath);
+      if (!located) return;
+      source = located;
     }
+    s().setBusy(`Reloading ${table.name}…`);
     const r = await window.ontology.importTable(tableId, source);
     const before = new Set(table.columns.map((c) => c.name));
     const after = new Set(r.columns.map((c) => c.name));
