@@ -11,6 +11,7 @@ import {
 } from '@dnd-kit/core';
 import { useMemo, useRef, useState } from 'react';
 import { itemLabel } from '@shared/compiler/compile';
+import { calcInfo } from '@shared/formula/check';
 import { CHART_LABELS, chartFits, recommendCharts, resolveChartType, viewShape } from '@shared/recommend/recommend';
 import {
   CHART_TYPES,
@@ -208,6 +209,7 @@ function Worksheet(): React.JSX.Element {
           </div>
           <aside className="side-pane">
             <ChartTypes spec={spec} edit={edit} />
+            <TableCalcDirection spec={spec} edit={edit} />
             <div className="col" style={{ gap: 6 }}>
               <h3>Marks</h3>
               <Shelf name="color" spec={spec} edit={edit} vertical />
@@ -525,6 +527,44 @@ function FilterShelf({ spec, edit, onEdit }: { spec: VizSpec; edit: (fn: (s: Viz
         </span>
       ))}
       {spec.filters.length === 0 && <span className="shelf-hint">Drop a field here to filter</span>}
+    </div>
+  );
+}
+
+/** Lets the user choose which dimension table calculations run along, when the view has a table calculation and several dimensions. */
+function TableCalcDirection({ spec, edit }: { spec: VizSpec; edit: (fn: (s: VizSpec) => void) => void }): React.JSX.Element | null {
+  const model = useStore((s) => s.project.model);
+  const items = [...spec.columns, ...spec.rows, spec.color, spec.size, spec.label, ...spec.tooltip].filter((i): i is ShelfItem => !!i);
+  const hasTableCalc = items.some((i) => i.field.kind === 'calc' && calcInfo(model, i.field.id).level === 'tcalc');
+  const dims = items.filter((i) => i.role === 'dimension');
+  if (!hasTableCalc || dims.length < 2) return null;
+  // Same default as the compiler: the first dimension on Columns, then Rows, then Color.
+  const auto = [...spec.columns, ...spec.rows, spec.color].find((i) => i?.role === 'dimension') ?? dims[0];
+  const current = dims.some((d) => d.id === spec.calcAlong) ? spec.calcAlong : '';
+  return (
+    <div className="col" style={{ gap: 6 }}>
+      <h3>Table calculations</h3>
+      <label className="col" style={{ gap: 2 }}>
+        <span className="muted">Run along</span>
+        <select
+          aria-label="Table calculations run along"
+          value={current}
+          onChange={(e) =>
+            edit((s) => {
+              if (e.target.value) s.calcAlong = e.target.value;
+              else delete s.calcAlong;
+            })
+          }
+        >
+          <option value="">Automatic ({itemLabel(auto, model)})</option>
+          {dims.map((d) => (
+            <option key={d.id} value={d.id}>
+              {itemLabel(d, model)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <span className="faint">They restart for each value of the other dimensions.</span>
     </div>
   );
 }

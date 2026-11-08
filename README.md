@@ -12,7 +12,7 @@ A free, open-source desktop app for exploring local data and building interactiv
 - **Model several tables.** Relationships are suggested from matching column names and types. Cardinality (one-to-many and so on) is detected from the data, and you are warned when a many-to-many relationship would multiply rows and inflate totals.
 - **Build views by dragging fields** onto Columns, Rows, Color, Size, Label, Tooltip and Filters. Chart types: bar, stacked bar, line, area, scatter, pie, donut, heatmap, table, pivot table and KPI card. The app recommends a chart for the fields you picked. Date drill levels (year, quarter, month, week, day), sorting, Top N filters, number formats, and undo and redo.
 - **Write formulas** in a readable language with aggregates, logic, text, date and maths functions, level of detail expressions (`FIXED`, `INCLUDE`, `EXCLUDE`) and table calculations (`RUNNING_SUM`, `PERCENT_OF_TOTAL`, `RANK`, `LAG`). Errors show the line, column and a plain-language explanation.
-- **Compose dashboards** with several pages of resizable tiles: worksheets, text and slicers (list, date range, numeric range). Click a bar, slice, point or table row to cross-filter the rest of the page, and clear it with the chip at the top.
+- **Compose dashboards** with several pages of resizable tiles: worksheets, text and slicers (list, date range, numeric range). Click a bar, slice, point or table row to cross-filter the rest of the page, and clear it with the chip at the top. Slicers only offer values that the page's other slicers and cross-filter leave.
 - **Export** a chart as PNG, a view's data as CSV, and a dashboard page as PDF.
 - **Save projects** as `.ontology` files: pretty-printed JSON that diffs well in Git.
 - **Light and dark themes.**
@@ -166,7 +166,7 @@ How the level of detail expressions behave:
 - `INCLUDE` is computed at the view's dimensions plus its own, after dimension filters, and then aggregated to the view. Wrap it in an aggregate, for example `AVG({INCLUDE [Customer] : SUM([Sales])})`.
 - `EXCLUDE` is computed at the view's dimensions minus its own, after dimension filters, and repeated for each mark.
 
-Table calculations run along the first dimension on Columns (or Rows, then Color) and restart for each value of the view's other dimensions.
+Table calculations run along the first dimension on Columns (or Rows, then Color) and restart for each value of the view's other dimensions. To run them along a different dimension, choose it under **Table calculations** in the worksheet's side panel.
 
 A saved calculation is a **calculated column** when it works row by row, or a **measure** when it aggregates.
 
@@ -184,8 +184,8 @@ A saved calculation is a **calculated column** when it works row by row, or a **
 - **Excel:** `.xlsx` only (not the older `.xls`). The first row of each sheet must be its header. Cells with formulas are read as their last saved values.
 - **Data is held in memory** while a project is open. Very large files (many gigabytes) may not fit.
 - **Charts** draw at most 10,000 rows. Larger results are cut off with a visible notice; CSV export always writes every row.
-- **Slicers** apply to every worksheet on their page that is related to the slicer's table. They do not filter each other's lists of values.
-- **Table calculations** always run along the first dimension (see above); you cannot yet choose a different direction.
+- **Slicers** apply to every worksheet on their page that is related to the slicer's table.
+- **Table calculations** in one view all run along the same dimension.
 - **Filters on table calculations** are not supported.
 - **Accessibility:** keyboard navigation works for menus, dialogs and forms, but charts and drag and drop need a mouse.
 - Not in v0.1: live database connections, data preparation steps, maps, importing other tools' files, sharing or a server, row-level security, and AI features. See [docs/RESEARCH.md](docs/RESEARCH.md) for what is planned.

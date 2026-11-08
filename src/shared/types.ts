@@ -127,6 +127,12 @@ export interface VizSpec {
   tooltip: ShelfItem[];
   filters: FilterDef[];
   sort?: SortSpec;
+  /**
+   * Id of the dimension item that table calculations run along. The other dimensions partition
+   * them. Undefined, or an item no longer in the view, means the first dimension on Columns,
+   * then Rows, then Color.
+   */
+  calcAlong?: string;
 }
 
 export interface Worksheet {

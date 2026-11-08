@@ -302,7 +302,14 @@ describe('filters and pipeline order', () => {
   it('ranks Top N before other dimension filters, then intersects them (Tableau order)', async () => {
     const c = dim('orders', 'cust');
     const s = meas('orders', 'sales');
-    const top2 = { id: 'f', kind: 'topN' as const, field: col('orders', 'cust'), n: 2, by: { field: col('orders', 'sales'), agg: 'SUM' as const }, direction: 'top' as const };
+    const top2 = {
+      id: 'f',
+      kind: 'topN' as const,
+      field: col('orders', 'cust'),
+      n: 2,
+      by: { field: col('orders', 'sales'), agg: 'SUM' as const },
+      direction: 'top' as const
+    };
     const west = { id: 'w', kind: 'values' as const, field: col('orders', 'region'), values: ['West'] };
     // Overall top 2 is c3 (450) and c1 (300). Only c3 has West orders (150).
     const { rows } = await db.viz({ columns: [c], rows: [s], filters: [top2, west] });
@@ -557,6 +564,29 @@ describe('table calculations', () => {
     // East by month: Jan 100, Feb 200, Mar 300.
     expect(rows.map((x) => x[run.id])).toEqual([100, 300, 600]);
   });
+
+  it('runs along the dimension chosen with calcAlong, and partitions by the others', async () => {
+    addCalc('pct', 'PERCENT_OF_TOTAL(SUM([sales]))');
+    const m = dim('orders', 'order_date', 'month');
+    const r = dim('orders', 'region');
+    const pct = calcItem('pct');
+    const sums = (rows: Record<string, unknown>[], by: string): number[] => {
+      const totals = new Map<string, number>();
+      // A region with no sales has a null share and is left out.
+      for (const row of rows) if (row[pct.id] !== null) totals.set(String(row[by]), (totals.get(String(row[by])) ?? 0) + Number(row[pct.id]));
+      return [...totals.values()].map((v) => Math.round(v * 1e9) / 1e9);
+    };
+    // Default: along the month on Columns, so each region's shares add up to 1.
+    const along = await db.viz({ columns: [m], rows: [pct], color: r });
+    expect(sums(along.rows, r.id).every((v) => v === 1)).toBe(true);
+    // Along region instead: each month's shares add up to 1.
+    const across = await db.viz({ columns: [m], rows: [pct], color: r, calcAlong: r.id });
+    expect(sums(across.rows, m.id).every((v) => v === 1)).toBe(true);
+    expect(sums(across.rows, r.id).every((v) => v === 1)).toBe(false);
+    // An id that is no longer in the view falls back to the default.
+    const stale = await db.viz({ columns: [m], rows: [pct], color: r, calcAlong: 'gone' });
+    expect(stale.rows).toEqual(along.rows);
+  });
 });
 
 describe('formulas compiled to SQL', () => {
@@ -616,7 +646,8 @@ describe('formulas compiled to SQL', () => {
     addCalc('today', 'MAX(TODAY())');
     const item = calcItem('today');
     const { rows } = await db.viz({ rows: [item, meas('orders', 'sales')] });
-    expect(rows[0][item.id]).toBe(new Date().toISOString().slice(0, 10));
+    // The local date, not the UTC one (they differ for part of the day outside UTC). en-CA formats as YYYY-MM-DD.
+    expect(rows[0][item.id]).toBe(new Date().toLocaleDateString('en-CA'));
   });
 });
 

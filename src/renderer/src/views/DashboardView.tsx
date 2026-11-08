@@ -304,7 +304,11 @@ function TileView({
         ? (tile.title ?? itemLabel({ id: 'x', field: tile.field, role: 'dimension' }, model))
         : '';
   const isSource = cross?.tileId === tile.id;
-  const external = useMemo(() => [...slicerFilters, ...(cross && cross.tileId !== tile.id ? cross.filters : [])], [slicerFilters, cross, tile.id]);
+  // A slicer is filtered by the page's other slicers and cross-filter, but not by its own selection.
+  const external = useMemo(
+    () => [...slicerFilters.filter((f) => f.id !== `s_${tile.id}`), ...(cross && cross.tileId !== tile.id ? cross.filters : [])],
+    [slicerFilters, cross, tile.id]
+  );
 
   const onMarkClick = useCallback(
     (ri: number, result: QueryResult) => {
@@ -385,6 +389,7 @@ function TileView({
         {tile.kind === 'slicer' && (
           <Slicer
             tile={tile}
+            others={external}
             onChange={(state) =>
               editPage((p) => {
                 const t = p.tiles.find((x) => x.id === tile.id);
@@ -398,7 +403,16 @@ function TileView({
   );
 }
 
-function Slicer({ tile, onChange }: { tile: Extract<Tile, { kind: 'slicer' }>; onChange: (s: SlicerState | undefined) => void }): React.JSX.Element {
+function Slicer({
+  tile,
+  others,
+  onChange
+}: {
+  tile: Extract<Tile, { kind: 'slicer' }>;
+  /** The page's other slicers and cross-filter, which narrow the values this slicer offers. */
+  others: FilterDef[];
+  onChange: (s: SlicerState | undefined) => void;
+}): React.JSX.Element {
   const model = useStore((s) => s.project.model);
   const info = fieldInfo(model, tile.field);
   const spec: VizSpec = useMemo(
@@ -417,7 +431,7 @@ function Slicer({ tile, onChange }: { tile: Extract<Tile, { kind: 'slicer' }>; o
           },
     [tile.field, tile.slicerType]
   );
-  const q = useVizQuery(model, spec, undefined, 2000);
+  const q = useVizQuery(model, spec, others.length ? others : undefined, 2000);
   const st = tile.state ?? {};
   if (q.error) return <div className="banner error">{q.error}</div>;
   if (!q.result) return <div className="slicer muted">Loading…</div>;
@@ -446,6 +460,15 @@ function Slicer({ tile, onChange }: { tile: Extract<Tile, { kind: 'slicer' }>; o
             {formatValue(v, info?.dataType ?? 'string')}
           </label>
         ))}
+        {/* Selected values that the other filters now exclude stay visible, so they can be cleared. */}
+        {(st.values ?? [])
+          .filter((v) => !q.result?.rows.some(([x]) => JSON.stringify(x) === JSON.stringify(v)))
+          .map((v) => (
+            <label className="opt faint" key={`gone-${JSON.stringify(v)}`} title="No data with the page's other filters">
+              <input type="checkbox" checked onChange={() => toggle(v)} />
+              {formatValue(v, info?.dataType ?? 'string')} (no data)
+            </label>
+          ))}
         {q.result.truncated && <span className="faint">Only the first {q.result.limit} values are listed.</span>}
       </div>
     );

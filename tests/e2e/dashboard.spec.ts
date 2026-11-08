@@ -124,3 +124,37 @@ test('date range slicer filters the page', async () => {
   await slicer.getByRole('button', { name: 'Clear' }).click();
   await expect.poll(() => tableRows(tile)).toHaveLength(3);
 });
+
+test('slicers narrow the values offered by the other slicers on the page', async () => {
+  l = await launch({ firstRun: false });
+  const { page } = l;
+  await importFixtures(l, ['sales.csv']);
+  await page.getByText('Dashboard 1').click();
+  for (const [field, type] of [
+    ['sales.sale_date', 'dateRange'],
+    ['sales.region', 'list']
+  ]) {
+    await page.getByRole('button', { name: '+ Add tile' }).click();
+    await page.getByRole('menuitem', { name: 'Slicer…' }).click();
+    await page.getByLabel('Slicer field').selectOption({ label: field });
+    await expect(page.getByLabel('Slicer type')).toHaveValue(type);
+    await page.getByRole('button', { name: 'Add slicer' }).click();
+  }
+  const dates = page.getByTestId('slicer-dateRange');
+  const regions = page.getByTestId('slicer-list');
+  const options = (): Promise<string[]> => regions.locator('.opt').allTextContents();
+  await expect.poll(options).toEqual(['East', 'North', 'West']);
+
+  // Pick East, then narrow the dates to February, when only West sold: East stays listed so it can be cleared.
+  await regions.getByText('East').click();
+  await dates.getByLabel('From').fill('2024-02-01');
+  await dates.getByLabel('To').fill('2024-02-29');
+  await expect.poll(options).toEqual(['West', 'East (no data)']);
+  // The region slicer's own choice does not narrow its own list, but it narrows the date range shown.
+  await regions.getByRole('button', { name: 'Clear' }).click();
+  await expect.poll(options).toEqual(['West']);
+  await dates.getByRole('button', { name: 'Clear' }).click();
+  await regions.getByText('North').click();
+  await expect(dates).toContainText('2024-03-01 to 2024-03-01');
+  await expect.poll(options).toEqual(['East', 'North', 'West']);
+});
