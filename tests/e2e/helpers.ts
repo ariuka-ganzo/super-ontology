@@ -17,7 +17,9 @@ export interface Launched {
 /** Command-line arguments that start the app (the packaged executable needs none; the dev build needs the project folder). */
 export function appArgs(extra: string[] = []): string[] {
   const args = process.env['ONTOLOGY_E2E_EXECUTABLE'] ? [] : [ROOT];
-  if (process.platform === 'linux') args.push('--no-sandbox');
+  // CI's Linux machines have no GPU. Chromium no longer falls back to software WebGL by itself, and
+  // Explore's graph needs WebGL, so tests ask for the software renderer. The app itself does not.
+  if (process.platform === 'linux') args.push('--no-sandbox', '--enable-unsafe-swiftshader');
   return [...args, ...extra];
 }
 

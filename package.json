@@ -22,7 +22,10 @@
   "dependencies": {
     "@duckdb/node-api": "1.5.6-r.2",
     "fflate": "0.8.3",
+    "graphology": "0.26.0",
+    "graphology-layout-forceatlas2": "0.10.1",
     "read-excel-file": "9.3.14",
+    "sigma": "3.0.3",
     "zod": "4.6.7"
   },
   "devDependencies": {
@@ -41,6 +44,7 @@
     "eslint": "9.39.5",
     "eslint-plugin-react-hooks": "7.0.1",
     "globals": "16.5.0",
+    "graphology-types": "0.24.8",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-grid-layout": "1.5.2",

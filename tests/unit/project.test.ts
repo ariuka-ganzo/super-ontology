@@ -35,6 +35,18 @@ function sample(dataPath: string): Project {
         name: 'Dash',
         pages: [{ id: 'p1', name: 'Page 1', tiles: [{ id: 'x', kind: 'worksheet', worksheetId: 'w1', layout: { x: 0, y: 0, w: 6, h: 4 } }] }]
       }
+    ],
+    explorations: [
+      {
+        id: 'e1',
+        name: 'Links',
+        fields: [{ kind: 'column', table: 't1', column: 'a' }],
+        measure: { field: { kind: 'column', table: 't1', column: 'a' }, agg: 'SUM' },
+        time: { kind: 'column', table: 't1', column: 'a' },
+        topN: 25,
+        links: 'surprising',
+        colorBy: 'change'
+      }
     ]
   };
 }
@@ -46,11 +58,12 @@ describe('project files', () => {
     const data = join(dir, 'data', 'sales.csv');
     await saveProject(sample(data), file);
     const text = readFileSync(file, 'utf8');
-    expect(text).toContain('\n  "formatVersion": 2,');
+    expect(text).toContain('\n  "formatVersion": 3,');
     expect(JSON.parse(text).model.tables[0].source.path).toBe('data/sales.csv');
     const loaded = await loadProject(file);
     expect(loaded.model.tables[0].source.path).toBe(data);
     expect(loaded.worksheets[0].spec.rows[0].agg).toBe('SUM');
+    expect(loaded.explorations?.[0]).toMatchObject({ name: 'Links', topN: 25, links: 'surprising', time: { kind: 'column', column: 'a' } });
     // No temporary files left behind.
     expect(readdirSync(dir).filter((f) => f.endsWith('.ontology-tmp'))).toEqual([]);
   });

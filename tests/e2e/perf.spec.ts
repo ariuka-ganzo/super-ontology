@@ -34,14 +34,38 @@ test('1 million row CSV: import and first chart', async () => {
   const tChart = Date.now();
   await shot(page, 'perf-1m');
 
+  // Explore on the same million rows: the suggested graph, then moving the time window.
+  const tExplore = Date.now();
+  await page.getByTestId('nav-explore').click();
+  const canvas = page.getByTestId('graph-canvas');
+  await expect(canvas).toHaveAttribute('data-settled', 'true', { timeout: 60_000 });
+  const tGraph = Date.now();
+  await shot(page, 'perf-1m-explore');
+  const status = page.getByTestId('explore-status');
+  const windowMs: number[] = [];
+  for (const button of ['All time', 'Latest', 'All time']) {
+    const loads = Number(await status.getAttribute('data-loads'));
+    await page.getByRole('button', { name: button }).click();
+    // Wait for this change's own load to finish, then read its time.
+    await expect.poll(async () => Number(await status.getAttribute('data-loads')), { timeout: 30_000 }).toBeGreaterThan(loads);
+    await expect(status).not.toContainText('Updating');
+    windowMs.push(Number((await status.textContent())?.match(/(\d+) ms/)?.[1]));
+  }
+
   const result = {
     file: `${mb} MB, 1,000,000 rows`,
     importClickToReadyMs: tImported - t0,
     engineImportSeconds: engineImport,
     firstChartFromFieldsMs: tChart - tSheet,
-    totalMs: tImported - t0 + (tChart - tSheet)
+    totalMs: tImported - t0 + (tChart - tSheet),
+    exploreFirstGraphMs: tGraph - tExplore,
+    exploreNodes: Number(await canvas.getAttribute('data-nodes')),
+    exploreWindowChangeMs: windowMs
   };
   console.log('PERF', JSON.stringify(result));
   await app.close();
   expect(result.totalMs).toBeLessThan(5000);
+  expect(result.exploreFirstGraphMs).toBeLessThan(10_000);
+  // The third change returns to a window already seen, so it comes from the cache.
+  expect(Math.max(...windowMs)).toBeLessThan(2000);
 });

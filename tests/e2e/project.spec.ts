@@ -33,7 +33,7 @@ test('saves a project, reopens it and gets the same view back', async () => {
   await page.getByRole('button', { name: 'Save as…' }).click();
   await expect(page.getByTestId('toast-info').filter({ hasText: 'Saved' })).toBeVisible();
   const saved = JSON.parse(readFileSync(file, 'utf8'));
-  expect(saved.formatVersion).toBe(2);
+  expect(saved.formatVersion).toBe(3);
   expect(saved.worksheets[0].spec.chartType).toBe('table');
   expect(readFileSync(file, 'utf8')).toContain('\n  "model": {');
 

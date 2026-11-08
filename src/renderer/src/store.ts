@@ -3,7 +3,7 @@ import type { Dashboard, FilterDef, Project, ThemeName, VizSpec, Worksheet } fro
 import { FORMAT_VERSION } from '@shared/types';
 import { newId } from './ids';
 
-export type View = 'data' | 'model' | 'worksheet' | 'dashboard';
+export type View = 'data' | 'model' | 'explore' | 'worksheet' | 'dashboard';
 
 export interface Toast {
   id: string;
@@ -56,6 +56,7 @@ interface State {
   future: Project[];
   view: View;
   worksheetId: string | null;
+  explorationId: string | null;
   dashboardId: string | null;
   pageId: string | null;
   tableId: string | null;
@@ -96,6 +97,7 @@ export const useStore = create<State>((set, get) => ({
   future: [],
   view: 'data',
   worksheetId: null,
+  explorationId: null,
   dashboardId: null,
   pageId: null,
   tableId: null,
@@ -142,6 +144,7 @@ export const useStore = create<State>((set, get) => ({
       stepErrors,
       crossFilters: {},
       worksheetId: ws,
+      explorationId: project.explorations?.[0]?.id ?? null,
       dashboardId: db?.id ?? null,
       pageId: db?.pages[0]?.id ?? null,
       tableId: project.model.tables[0]?.id ?? null
@@ -157,7 +160,8 @@ export const useStore = create<State>((set, get) => ({
       const dash = get().project.dashboards.find((d) => d.id === dashId);
       const pageId = dash?.pages.some((p) => p.id === get().pageId) ? get().pageId : (dash?.pages[0]?.id ?? null);
       set({ view, dashboardId: dashId, pageId });
-    } else set({ view });
+    } else if (view === 'explore') set({ view, explorationId: id ?? get().explorationId ?? get().project.explorations?.[0]?.id ?? null });
+    else set({ view });
   },
   setPage(pageId) {
     set({ pageId });

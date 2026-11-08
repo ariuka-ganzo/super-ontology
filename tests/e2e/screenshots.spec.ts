@@ -23,6 +23,16 @@ test('README screenshots', async () => {
   await settle();
   await page.screenshot({ path: out('data') });
 
+  // Explore: the suggested graph with the first insight highlighted, then a value's own story.
+  await page.getByTestId('nav-explore').click();
+  await expect(page.getByTestId('graph-canvas')).toHaveAttribute('data-settled', 'true', { timeout: 20_000 });
+  await settle();
+  await page.screenshot({ path: out('explore') });
+  await page.getByLabel('Find a value').fill('Halden');
+  await page.getByTestId('search-results').getByRole('button').first().click();
+  await settle();
+  await page.screenshot({ path: out('explore-value') });
+
   await page.getByTestId('nav-model').click();
   await page.getByRole('button', { name: 'Edit' }).nth(1).click();
   await settle();
