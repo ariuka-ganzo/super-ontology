@@ -29,7 +29,7 @@ A free, open-source desktop app for exploring local data and building interactiv
 Installers are built by GitHub Actions when a version tag is pushed and attached to a GitHub release:
 
 - **Windows:** `Super-Ontology-<version>-win-x64.exe` (NSIS installer, per-user, lets you pick the folder)
-- **macOS:** `Super-Ontology-<version>-mac-arm64.dmg` (Apple silicon)
+- **macOS:** `Super-Ontology-<version>-mac-arm64.dmg` (Apple silicon: M1 and later) or `Super-Ontology-<version>-mac-x64.dmg` (Intel)
 - **Linux:** `Super-Ontology-<version>-linux-x86_64.AppImage`
 
 ### The installers are not signed yet
@@ -187,7 +187,6 @@ A saved calculation is a **calculated column** when it works row by row, or a **
 - **Slicers** apply to every worksheet on their page that is related to the slicer's table. They do not filter each other's lists of values.
 - **Table calculations** always run along the first dimension (see above); you cannot yet choose a different direction.
 - **Filters on table calculations** are not supported.
-- **Macs with Intel processors:** the release workflow builds for Apple silicon only.
 - **Accessibility:** keyboard navigation works for menus, dialogs and forms, but charts and drag and drop need a mouse.
 - Not in v0.1: live database connections, data preparation steps, maps, importing other tools' files, sharing or a server, row-level security, and AI features. See [docs/RESEARCH.md](docs/RESEARCH.md) for what is planned.
 
