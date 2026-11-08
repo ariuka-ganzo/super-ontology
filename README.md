@@ -45,11 +45,11 @@ Code signing certificates cost money, so v0.1 ships unsigned. Your operating sys
 You need [Node.js](https://nodejs.org/) 22.12 or later (24 recommended) and Git. No Rust or C++ toolchain is needed: DuckDB ships prebuilt binaries.
 
 ```bash
-git clone https://github.com/ariuka-ganzo/facet-bi.git
+git clone https://github.com/ariuka-ganzo/super-ontology.git
 ```
 
 ```bash
-cd facet-bi
+cd super-ontology
 ```
 
 ```bash
