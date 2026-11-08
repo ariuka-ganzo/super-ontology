@@ -37,6 +37,7 @@ export function App(): React.JSX.Element {
   const busy = useStore((s) => s.busy);
   const [dropping, setDropping] = useState(false);
   const [about, setAbout] = useState(false);
+  const [version, setVersion] = useState('');
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -52,6 +53,7 @@ export function App(): React.JSX.Element {
     // Listen before asking for startup info, so a file opened from the OS in between is not lost.
     const off = window.ontology.onOpenPath((path) => void openProject(path));
     void window.ontology.startup().then((info) => {
+      setVersion(info.version);
       if (info.openPath) void openProject(info.openPath);
       else if (info.firstRun) void openSample(true);
     });
@@ -149,7 +151,7 @@ export function App(): React.JSX.Element {
           <div className="col">
             <div className="row">
               <Logo />
-              <b>Super Ontology 0.1</b>
+              <b>Super Ontology {version}</b>
             </div>
             <p>A free, open-source desktop app for exploring local data and building interactive dashboards. MIT licence.</p>
             <p className="muted">

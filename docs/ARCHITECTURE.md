@@ -122,9 +122,9 @@ samples/  docs/
 
 GitHub Actions builds a Windows NSIS installer, a macOS dmg and a Linux AppImage on version tags. Installers are unsigned at first, so document the Windows SmartScreen and macOS Gatekeeper warnings in the README.
 
-## Implementation notes (v0.1)
+## Implementation notes
 
-Decisions made while building v0.1, where the spec above left room:
+Decisions made while building, where the spec above left room (v0.1, with v0.2 additions marked):
 
 - **Two DuckDB instances.** DuckDB cannot widen `allowed_paths` once external access is disabled, so the engine uses two instances. The query instance holds the data and runs compiled queries with `enable_external_access = false` and `lock_configuration = true`. A reader instance runs only fixed import statements (`read_csv`, `read_parquet`, `read_json_auto`) with the user-chosen path bound as a parameter, and streams data chunks into the query instance through an appender. Neither instance installs or loads extensions; Parquet and JSON readers are built in.
 - **Excel** is read with `read-excel-file` (MIT, no known advisories at the time of writing), written to a temporary CSV and imported like any CSV, so types are inferred the same way. Only the sheet being imported is parsed; sheet names come from `xl/workbook.xml` alone (unzipped with `fflate`, MIT). No DuckDB extension is downloaded.

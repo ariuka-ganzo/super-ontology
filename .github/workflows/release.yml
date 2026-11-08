@@ -44,7 +44,7 @@ jobs:
         env:
           REQUIRE_DB_CONNECTORS: '1'
       - run: npm run build
-      # Installers are unsigned in v0.1 (see README).
+      # Installers are unsigned for now (see README).
       - run: npx electron-builder ${{ matrix.target }} --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
