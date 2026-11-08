@@ -30,6 +30,9 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Add DuckDB's Intel binding for the Intel Mac build
+        if: runner.os == 'macOS'
+        run: node scripts/add-duckdb-binding.mjs darwin-x64
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
@@ -64,4 +67,4 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --draft \
             --title "Super Ontology $GITHUB_REF_NAME" \
-            --notes "Unsigned installers for Windows (NSIS), macOS (dmg, Apple silicon) and Linux (AppImage). See the README for the Windows SmartScreen and macOS Gatekeeper warnings."
+            --notes "Unsigned installers for Windows (NSIS), macOS (dmg, Apple silicon and Intel) and Linux (AppImage). See the README for the Windows SmartScreen and macOS Gatekeeper warnings."
