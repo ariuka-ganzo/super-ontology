@@ -2,7 +2,7 @@
 
 A free, open-source desktop app for exploring local data and building interactive dashboards. It gives you the drag-and-drop workflow of commercial BI tools without a licence or a cloud account. Your data stays on your computer: Super Ontology has no telemetry, and the only network connections it makes are to database servers you add yourself.
 
-**Status: v0.1, early.** It works end to end and is tested on Windows, macOS and Linux, but expect rough edges. Installers are not code-signed yet.
+**Status: v0.2, early.** It works end to end and is tested on Windows, macOS and Linux, but expect rough edges. Installers are not code-signed yet.
 
 ![Sample dashboard](docs/screenshots/dashboard.png)
 
@@ -36,7 +36,7 @@ Installers are built by GitHub Actions when a version tag is pushed and attached
 
 ### The installers are not signed yet
 
-Code signing certificates cost money, so v0.1 ships unsigned. Your operating system will warn you the first time. Only do the following if you downloaded the installer from this repository's Releases page.
+Code signing certificates cost money, so the installers are unsigned for now. Your operating system will warn you the first time. Only do the following if you downloaded the installer from this repository's Releases page.
 
 - **Windows SmartScreen** shows "Windows protected your PC". Click **More info**, then **Run anyway**.
 - **macOS Gatekeeper** says the app "cannot be opened because the developer cannot be verified" or that it "is damaged". Drag Super Ontology to Applications, then right-click (or Control-click) it and choose **Open**, and confirm. If that does not offer Open, go to **System Settings > Privacy & Security** and click **Open Anyway** next to the Super Ontology message. As a last resort, in Terminal: `xattr -dr com.apple.quarantine "/Applications/Super Ontology.app"`.
@@ -189,7 +189,7 @@ A saved calculation is a **calculated column** when it works row by row, or a **
 - DuckDB runs as two instances. The one that runs queries has file access disabled and its configuration locked, so it cannot read or write files or install extensions. A second instance only runs fixed import statements, with the path of a file you chose bound as a parameter, and only for data file extensions (`.csv`, `.tsv`, `.parquet`, `.json`, `.xlsx` and similar), even when the path comes from a project file. DuckDB extensions are never downloaded.
 - Data values and file names are escaped before they are shown, including in chart tooltips. CSV exports prefix cells that start with `=`, `+`, `-` or `@` with an apostrophe so spreadsheets do not run them as formulas.
 
-## Known limitations in v0.1
+## Known limitations
 
 - **Data is not embedded in projects.** A `.ontology` file stores paths to your data files (relative to the project where possible). Moving a project to another computer means moving the data too, then using **Locate file** if the paths differ.
 - **Excel:** `.xlsx` only (not the older `.xls`). The first row of each sheet must be its header. Cells with formulas are read as their last saved values.

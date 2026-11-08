@@ -49,7 +49,7 @@ mac:
     - target: dmg
       arch: [arm64, x64]
   category: public.app-category.business
-  # Unsigned in v0.1. See the README for the Gatekeeper warning.
+  # Unsigned for now. See the README for the Gatekeeper warning.
   identity: null
 linux:
   target:
