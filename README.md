@@ -2,7 +2,7 @@
 
 A free, open-source desktop app for exploring local data and building interactive dashboards. It gives you the drag-and-drop workflow of commercial BI tools without a licence or a cloud account. Your data stays on your computer: Super Ontology has no telemetry, and the only network connections it makes are to database servers you add yourself.
 
-**Status: v0.2, early.** It works end to end and is tested on Windows, macOS and Linux, but expect rough edges. Installers are not code-signed yet.
+**Status: v0.3, early.** It works end to end and is tested on Windows, macOS and Linux, but expect rough edges. Installers are not code-signed yet.
 
 ![Sample dashboard](docs/screenshots/dashboard.png)
 
