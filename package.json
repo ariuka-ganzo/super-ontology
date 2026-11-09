@@ -1,6 +1,6 @@
 {
   "name": "super-ontology",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Free, open-source desktop app for exploring local data and building interactive dashboards.",
   "main": "out/main/index.js",
   "author": "Super Ontology contributors",
