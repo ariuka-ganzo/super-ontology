@@ -235,11 +235,29 @@ export interface Dashboard {
 
 export type ThemeName = 'light' | 'dark';
 
+/** A saved Explore graph: see docs/EXPLORE.md. */
+export interface Exploration {
+  id: string;
+  name: string;
+  /** The fields whose values become nodes. 1 to 6. */
+  fields: FieldRef[];
+  /** Sizes nodes and weights links. */
+  measure: { field: FieldRef; agg: AggFn };
+  /** A date field for the timeline. Without it there is no timeline and no change over time. */
+  time?: FieldRef;
+  /** Values shown per field, largest first. */
+  topN: number;
+  /** Which links to draw. */
+  links: 'surprising' | 'strongest' | 'both';
+  colorBy: 'field' | 'change';
+}
+
 /**
- * Project file format. 2 added data cleaning steps (TableDef.steps); version 1 files open unchanged.
+ * Project file format. 2 added data cleaning steps (TableDef.steps); 3 added Explore graphs
+ * (Project.explorations). Older files open unchanged.
  * Older app versions refuse newer files instead of silently ignoring what they do not understand.
  */
-export const FORMAT_VERSION = 2;
+export const FORMAT_VERSION = 3;
 
 export interface Project {
   formatVersion: number;
@@ -247,6 +265,8 @@ export interface Project {
   model: Model;
   worksheets: Worksheet[];
   dashboards: Dashboard[];
+  /** Explore graphs (format 3). */
+  explorations?: Exploration[];
   theme?: ThemeName;
 }
 

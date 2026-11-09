@@ -10,6 +10,7 @@ import { startPrepSync } from './prepSync';
 import { newDashboard, newWorksheet, useStore, type View } from './store';
 import { DashboardView } from './views/DashboardView';
 import { DataView } from './views/DataView';
+import { ExploreView } from './views/ExploreView';
 import { ModelView } from './views/ModelView';
 import { WorksheetView } from './views/WorksheetView';
 
@@ -129,6 +130,7 @@ export function App(): React.JSX.Element {
       <main className="main">
         {view === 'data' && <DataView />}
         {view === 'model' && <ModelView />}
+        {view === 'explore' && <ExploreView />}
         {view === 'worksheet' && <WorksheetView />}
         {view === 'dashboard' && <DashboardView />}
       </main>
@@ -262,6 +264,7 @@ function Nav(): React.JSX.Element {
         </span>
       )}
       {item('model', 'Model', '⛓')}
+      {item('explore', 'Explore', '✳')}
       <div className="nav-section">
         <h3 className="grow">Worksheets</h3>
         <button className="small ghost" onClick={addWorksheet} title="New worksheet" data-testid="add-worksheet">

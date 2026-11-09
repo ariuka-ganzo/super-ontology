@@ -186,6 +186,21 @@ export const projectSchema = z.object({
       })
     )
     .max(200),
+  explorations: z
+    .array(
+      z.object({
+        id,
+        name,
+        fields: z.array(fieldRefSchema).min(1).max(6),
+        measure: z.object({ field: fieldRefSchema, agg }),
+        time: fieldRefSchema.optional(),
+        topN: z.number().int().min(2).max(200),
+        links: z.enum(['surprising', 'strongest', 'both']),
+        colorBy: z.enum(['field', 'change'])
+      })
+    )
+    .max(200)
+    .optional(),
   theme: z.enum(['light', 'dark']).optional()
 });
 

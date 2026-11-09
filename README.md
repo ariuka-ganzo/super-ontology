@@ -8,6 +8,7 @@ A free, open-source desktop app for exploring local data and building interactiv
 
 ## What it does
 
+- **Explore hidden relationships.** The Explore view maps how the values in your data connect, like a network graph in Obsidian but with amounts and time. Each value is a node sized by your measure; values that occur together are linked, and each link shows how much more (blue) or less (red) often they go together than if they were unrelated. Fields from different tables connect through your model, so customers link to the products they bought. A ranked list of **insights** points at what is unusual (hidden links, pairs that avoid each other, movers, shifting links, outliers, spikes, concentration), each explained in plain words; parent-child fields such as city and region are recognised as structure, not surprises. Click a value to see what makes it different, drag the **timeline** to compare any period with the one before, or press play to watch relationships change. It stays fast on large data: on a million rows the first graph takes under half a second and moving the time window about 40 ms. See [docs/EXPLORE.md](docs/EXPLORE.md) for the design.
 - **Import from databases.** Copy tables in from SQLite files, or from PostgreSQL and MySQL servers (a whole table or the result of a query you write). **Reload** fetches the latest data. Connections are read-only, and saved passwords are encrypted by your operating system and never stored in the project file.
 - **Import local files.** CSV, TSV, Parquet, JSON and Excel (.xlsx), by file dialog or by dragging files onto the window. For a workbook with several sheets, choose which sheets to import; each becomes a table. Preview the rows, change any column's detected type, and see a profile of each column: nulls, distinct values, min and max, and a histogram. Reload a table from its file; if the file is missing or its columns changed, you get a clear message and a "Locate file" button.
 - **Clean data with steps.** Rename, remove, keep or retype columns; filter rows; replace values; trim or change case; fill blanks; split and merge columns; remove duplicates and blank rows; keep the first rows; and append one table below another. Steps run in order, each shows the data as it was right after it, and they are saved in the project and re-run when the file is reloaded. The file itself is never changed.
@@ -19,6 +20,10 @@ A free, open-source desktop app for exploring local data and building interactiv
 - **Save projects** as `.ontology` files: pretty-printed JSON that diffs well in Git.
 - **Light and dark themes.**
 - A generated, fictional **sample project** opens on first launch so there is something to explore straight away.
+
+| Explore: relationships and insights | A value's own story |
+|---|---|
+| ![Explore graph with ranked insights and a timeline](docs/screenshots/explore.png) | ![A selected city with what makes it different](docs/screenshots/explore-value.png) |
 
 | Worksheet | Data and column profile |
 |---|---|
@@ -201,6 +206,7 @@ A saved calculation is a **calculated column** when it works row by row, or a **
 - **Accessibility:** keyboard navigation works for menus, dialogs and forms, but charts and drag and drop need a mouse.
 - **Cleaning steps** cannot be edited once added; remove the step and add it again. A table with steps keeps a second copy of its data in memory.
 - **Databases:** data is copied in when you import or press Reload, not queried live. PostgreSQL, MySQL and SQLite only (no SQL Server yet). Use an account that can only read.
+- **Explore** shows the top values of each field (up to 100 per field and 6 fields), not every row as its own node. Its graph needs WebGL; on a computer whose graphics driver offers none, insights and value details still work but the graph is replaced by a message. Projects with explorations use project format 3, which v0.2 and earlier refuse to open.
 - Not yet: live database queries, SQL Server, maps, importing other tools' files, sharing or a server, row-level security, and AI features. See [docs/RESEARCH.md](docs/RESEARCH.md) for what is planned.
 
 ## Licence

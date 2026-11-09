@@ -19,6 +19,10 @@ Super Ontology is MIT licensed. Its installers include the open-source component
 | react-grid-layout, react-draggable, react-resizable | 1.5.2 | MIT | Dashboard layout |
 | clsx, fast-equals, prop-types, resize-observer-polyfill | see lock file | MIT | Dependencies of react-grid-layout |
 | zustand | 5.0.8 | MIT | Application state |
+| sigma | 3.0.3 | MIT | Drawing the Explore graph with WebGL |
+| graphology, graphology-utils | 0.26.0, see lock file | MIT | Graph data structure for Explore |
+| graphology-layout-forceatlas2 | 0.10.1 | MIT | Explore graph layout |
+| events | see lock file | MIT | Dependency of sigma and graphology |
 | DuckDB extensions `sqlite_scanner`, `postgres_scanner`, `mysql_scanner` | 1.5.6 | MIT | Database connections. Official, signed builds from extensions.duckdb.org, shipped in `resources/duckdb-extensions` |
 | SQLite (inside `sqlite_scanner`) | | Public domain | Reading SQLite files |
 | libpq (inside `postgres_scanner`) | | PostgreSQL License | Connecting to PostgreSQL |
